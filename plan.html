@@ -245,6 +245,56 @@
     <div class="tp"><div class="tp-dot" style="background:#FB923C;"></div> Popup (PostMessage via window.open) — derisking for browser-extension-like UX (Phase 6)</div>
   </div>
 
+  <!-- TEST INFRASTRUCTURE -->
+  <div class="section-title">Test infrastructure</div>
+  <div class="context" style="border-color:var(--green);">
+    <h2>Headless wallet + agent test runner</h2>
+    <p>Each phase must be validatable by an automated agent, not just a human. The wallet exposes a headless mode and a local HTTP control API; a Node.js test runner drives the full flow without UI interaction.</p>
+  </div>
+
+  <div class="two-col" style="margin-bottom:2rem;">
+    <div class="col-box">
+      <h4>Headless wallet (<code>HEADLESS=1</code>)</h4>
+      <ul>
+        <li>Launched with env flag or URL param: <code>?headless=1</code></li>
+        <li>Auto-approves all <code>permission_request</code> and <code>operation_request</code></li>
+        <li>Exposes a control API on <code>http://localhost:&lt;WALLET_PORT&gt;</code></li>
+        <li><code>GET /pairing-uri</code> — returns the Matrix pairing URI as plain text</li>
+        <li><code>GET /last-op</code> — returns the last <code>transactionHash</code> returned to dApp</li>
+        <li><code>POST /reset</code> — clears session state between tests</li>
+      </ul>
+    </div>
+    <div class="col-box">
+      <h4>Agent test runner (<code>test/run.ts</code>)</h4>
+      <ul>
+        <li>Starts wallet dev server in headless mode</li>
+        <li>Fetches pairing URI from <code>/pairing-uri</code> — no QR scan</li>
+        <li>Drives dApp via its own API or direct SDK calls</li>
+        <li>Polls RPC to assert on-chain confirmation</li>
+        <li>Each phase has its own test file: <code>test/phase1.ts</code>, <code>test/phase2.ts</code>…</li>
+        <li>Exit 0 = pass, exit 1 + diff = fail</li>
+      </ul>
+    </div>
+  </div>
+
+  <pre style="margin-bottom:2rem;"><code><span class="cm">// test/phase1.ts — agent-runnable pattern</span>
+<span class="kw">const</span> <span class="prop">uri</span> = <span class="kw">await</span> <span class="fn">fetch</span>(<span class="str">'http://localhost:5174/pairing-uri'</span>).<span class="fn">then</span>(r => r.<span class="fn">text</span>());
+<span class="kw">await</span> dappClient.<span class="fn">pair</span>(uri);                          <span class="cm">// wallet auto-approves</span>
+<span class="kw">const</span> { <span class="prop">hash</span> } = <span class="kw">await</span> dappClient.<span class="fn">requestOperation</span>({...});
+<span class="kw">await</span> <span class="fn">waitForConfirmation</span>(hash, L1_RPC);               <span class="cm">// poll /chains/main/blocks/head</span>
+<span class="kw">const</span> <span class="prop">op</span> = <span class="kw">await</span> <span class="fn">fetch</span>(<span class="str">`${L1_RPC}/chains/main/blocks/head/operations/3`</span>)
+             .<span class="fn">then</span>(r => r.<span class="fn">json</span>()).<span class="fn">then</span>(ops => ops.<span class="fn">find</span>(o => o.hash === hash));
+<span class="kw">assert</span>(op !== undefined, <span class="str">'operation not found on chain'</span>);</code></pre>
+
+  <div class="col-box" style="margin-bottom:2rem;">
+    <h4>Shared helper: <code>waitForConfirmation(hash, rpcUrl)</code></h4>
+    <ul>
+      <li>Polls <code>GET /chains/main/blocks/head/operation_hashes</code> every 2s</li>
+      <li>Timeout after 60s → test fails</li>
+      <li>Returns block level on success</li>
+    </ul>
+  </div>
+
   <!-- PHASES -->
   <div class="section-title">Phases</div>
 
@@ -343,16 +393,14 @@ client.<span class="fn">onOperationRequest</span>(<span class="kw">async</span> 
 });</code></pre>
       <div class="outcome"><strong>Phase done when:</strong> dApp pairs with wallet via QR code, sends a tez transfer on L1, wallet signs and injects, operation lands on the txpark previewnet.</div>
       <div class="e2e">
-        <h4>E2E validation checklist</h4>
+        <h4>E2E validation — <code>test/phase1.ts</code></h4>
         <ol>
-          <li><code>WalletClient.init()</code> completes without error</li>
-          <li>dApp generates a valid pairing URI (<code>tezos://...</code>)</li>
-          <li>Wallet receives <code>permission_request</code> after opening URI</li>
-          <li>Wallet approves → dApp receives <code>permissions</code> with <code>publicKey</code></li>
-          <li>dApp sends <code>operation_request</code> (tez transfer, 1 μtez to self)</li>
-          <li>Wallet receives <code>operation_request</code> with correct <code>operationDetails</code></li>
-          <li>Wallet returns <code>transactionHash</code></li>
-          <li><strong>Transaction visible on TzKT</strong>: <code>/tzkt</code> on txpark shows confirmed op</li>
+          <li><code>GET /pairing-uri</code> on wallet returns non-empty string</li>
+          <li><code>dappClient.pair(uri)</code> resolves without error</li>
+          <li><code>dappClient.requestPermissions()</code> resolves with <code>publicKey</code> set</li>
+          <li><code>dappClient.requestOperation({ ... 1 μtez transfer })</code> returns <code>transactionHash</code></li>
+          <li><code>waitForConfirmation(hash, L1_RPC)</code> resolves within 60s</li>
+          <li><code>GET /chains/main/blocks/head/operations/3</code> contains the hash</li>
         </ol>
       </div>
     </div>
@@ -413,15 +461,13 @@ client.<span class="fn">onOperationRequest</span>(<span class="kw">async</span> 
 });</code></pre>
       <div class="outcome"><strong>Phase done when:</strong> dApp sends two operations in the same session — one to L1, one to Michelson interface — wallet routes correctly to each, and an unpatched wallet still works with the old single-network flow.</div>
       <div class="e2e">
-        <h4>E2E validation checklist</h4>
+        <h4>E2E validation — <code>test/phase2.ts</code></h4>
         <ol>
-          <li><code>permission_request</code> with <code>networks: [L1, Michelson]</code> received by wallet</li>
-          <li>Wallet UI displays both networks for approval</li>
-          <li><code>permission_response</code> includes accounts for both networks</li>
-          <li><code>requestOperation({ network: L1_CHAIN_ID, ... })</code> → wallet forges on L1 RPC → op confirmed on L1</li>
-          <li><code>requestOperation({ network: MICHELSON_CHAIN_ID, ... })</code> → wallet forges on Michelson RPC → op confirmed on Michelson interface</li>
-          <li><code>requestOperation({})</code> (no <code>network</code> field) → defaults to primary network, no error</li>
-          <li><strong>Backward compat</strong>: unpatched <code>@airgap/beacon-wallet</code> receives extended <code>permission_request</code> → connects successfully for single network, ignores <code>networks</code> field</li>
+          <li><code>requestPermissions({ networks: [L1, Michelson] })</code> → response contains accounts for both chain IDs</li>
+          <li><code>requestOperation({ network: L1_CHAIN_ID, ... })</code> → <code>waitForConfirmation(hash, L1_RPC)</code> resolves; <code>GET /chains/main/blocks/head/operations/3</code> on L1 RPC contains hash</li>
+          <li><code>requestOperation({ network: MICHELSON_CHAIN_ID, ... })</code> → <code>waitForConfirmation(hash, MICHELSON_RPC)</code> resolves; confirmed on Michelson RPC</li>
+          <li><code>requestOperation({/* no network */})</code> → resolves without error, confirmed on L1 (default)</li>
+          <li><strong>Backward compat</strong>: repeat test against unpatched <code>@airgap/beacon-wallet</code> → <code>requestPermissions()</code> resolves with single-network account, no exception thrown</li>
         </ol>
       </div>
     </div>
@@ -467,12 +513,11 @@ client.<span class="fn">onOperationRequest</span>(<span class="kw">async</span> 
       </div>
       <div class="outcome"><strong>Phase done when:</strong> Shareable demo recording exists. A wallet engineer watching it understands exactly what they need to implement to support multi-chain sessions.</div>
       <div class="e2e">
-        <h4>E2E validation checklist</h4>
+        <h4>E2E validation — <code>test/phase3.ts</code> + human review</h4>
         <ol>
-          <li>Full connect → approve → sign L1 → sign Michelson flow executes in &lt; 60 seconds</li>
-          <li>Both transaction hashes confirmed on TzKT and Blockscout</li>
-          <li>Wallet UI clearly shows which network each operation targets</li>
-          <li>Screen recording produced (≤ 2 minutes, no cuts)</li>
+          <li><code>test/phase2.ts</code> passes with real chain IDs (not fake placeholder)</li>
+          <li>Both hashes confirmed: <code>waitForConfirmation(hashL1, L1_RPC)</code> and <code>waitForConfirmation(hashMichelson, MICHELSON_RPC)</code></li>
+          <li><strong>Human review</strong>: wallet UI shows correct network label per operation — screen recording produced (≤ 2 min)</li>
         </ol>
       </div>
     </div>
@@ -515,14 +560,13 @@ client.<span class="fn">onOperationRequest</span>(<span class="kw">async</span> 
       </div>
       <div class="outcome"><strong>Phase done when:</strong> Full multi-chain session works between two separate HTTPS domains. Same use-case as Phase 3, from a real deployment.</div>
       <div class="e2e">
-        <h4>E2E validation checklist</h4>
+        <h4>E2E validation — <code>test/phase4.ts</code></h4>
         <ol>
-          <li>Wallet deployed at <code>https://wallet.&lt;domain&gt;</code> loads without errors</li>
-          <li>dApp at <code>https://dapp.&lt;domain&gt;</code> generates pairing URI</li>
-          <li>QR code scanned from wallet domain → Matrix pairing completes</li>
-          <li><strong>No CORS errors</strong> in browser console during pairing and operation flow</li>
-          <li>Matrix homeserver does not rate-limit during the demo sequence</li>
-          <li>Full Phase 3 use-case reproduced from deployed domains</li>
+          <li><code>GET https://wallet.&lt;domain&gt;/pairing-uri</code> returns non-empty string (headless wallet deployed)</li>
+          <li><code>dappClient.pair(uri)</code> resolves from dApp domain — Matrix pairing over public internet</li>
+          <li><code>test/phase2.ts</code> assertions all pass against deployed URLs</li>
+          <li>Agent inspects browser console logs via Playwright: <strong>zero CORS errors</strong></li>
+          <li>Matrix homeserver responds within 5s per message throughout the sequence</li>
         </ol>
       </div>
     </div>
@@ -583,14 +627,13 @@ client.<span class="fn">onOperationRequest</span>(<span class="kw">async</span> 
 }</code></pre>
       <div class="outcome"><strong>Phase done when:</strong> A WC2 session spanning both <code>tezos:</code> chains is established via Reown relay, and <code>tezos_send</code> is correctly dispatched to each chain via <code>chainId</code> routing.</div>
       <div class="e2e">
-        <h4>E2E validation checklist</h4>
+        <h4>E2E validation — <code>test/phase5.ts</code></h4>
         <ol>
-          <li>WC2 session proposal with two <code>tezos:</code> chains sent to Reown relay without error</li>
-          <li>Wallet receives and displays the session proposal</li>
-          <li>After approval, <code>session.namespaces.tezos.chains</code> contains both chain IDs</li>
-          <li><code>tezos_send</code> with <code>chainId: L1</code> → wallet routes to L1 RPC → op confirmed</li>
-          <li><code>tezos_send</code> with <code>chainId: MICHELSON_CHAIN_ID</code> → wallet routes to Michelson RPC → op confirmed</li>
-          <li>Reown relay does not reject or rate-limit the session</li>
+          <li><code>signClient.connect({ requiredNamespaces, optionalNamespaces })</code> resolves without error</li>
+          <li><code>session.namespaces.tezos.chains</code> contains both <code>tezos:NetXH12Aer3be93</code> and <code>tezos:&lt;MICHELSON_CHAIN_ID&gt;</code></li>
+          <li><code>signClient.request({ chainId: L1, method: 'tezos_send', ... })</code> → <code>waitForConfirmation(hash, L1_RPC)</code> resolves</li>
+          <li><code>signClient.request({ chainId: MICHELSON_CHAIN_ID, method: 'tezos_send', ... })</code> → <code>waitForConfirmation(hash, MICHELSON_RPC)</code> resolves</li>
+          <li>No <code>Error</code> or <code>reject</code> response from Reown relay throughout</li>
         </ol>
       </div>
     </div>
@@ -633,13 +676,13 @@ client.<span class="fn">onOperationRequest</span>(<span class="kw">async</span> 
       </div>
       <div class="outcome"><strong>Phase done when:</strong> Same multi-chain use-case works with a popup wallet. UX comparison between popup and Matrix QR pairing is documented.</div>
       <div class="e2e">
-        <h4>E2E validation checklist</h4>
+        <h4>E2E validation — <code>test/phase6.ts</code> (Playwright)</h4>
         <ol>
-          <li><code>window.open(walletUrl)</code> triggered on user click opens popup (no blocker)</li>
-          <li>PostMessage handshake establishes channel between opener and popup</li>
-          <li>Full Phase 2 multi-chain flow works via popup transport</li>
-          <li>Popup closes gracefully after operation completes</li>
-          <li>UX comparison documented: popup vs. Matrix QR (latency, friction, failure modes)</li>
+          <li>Playwright clicks "Connect" → <code>window.open</code> call observed in browser (no popup blocker in headed Chromium)</li>
+          <li>PostMessage handshake logs appear in both windows within 2s</li>
+          <li><code>test/phase2.ts</code> assertions all pass via popup transport</li>
+          <li>Popup window closes after operation — <code>page.isClosed()</code> returns true</li>
+          <li>Latency measured: time from <code>requestOperation</code> to <code>transactionHash</code> — recorded for comparison with Matrix baseline</li>
         </ol>
       </div>
     </div>
