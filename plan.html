@@ -611,7 +611,7 @@ client.<span class="fn">onOperationRequest</span>(<span class="kw">async</span> 
         <div class="col-box">
           <h4>Derisking questions</h4>
           <ul>
-            <li class="q">Does the <code>version: "3"</code> field survive the TZIP-10 → CAIP-25 translation in <code>WalletConnectCommunicationClient</code>? If WC2 wraps the message opaquely, version negotiation carries through; if it translates to native CAIP-25 fields, a WC2-specific capability detection mechanism may be needed.</li>
+            <li class="q">How should <code>networks[]</code> and <code>version: "3"</code> from <code>permission_request</code> be encoded in a WC2 session proposal? WC2 already has a multi-chain model (<code>requiredNamespaces</code>, <code>optionalNamespaces</code>, chains). The SDK patch must decide whether to map Beacon <code>networks[]</code> to WC2 chains, or carry the Beacon payload as opaque params — these lead to different capability detection mechanisms on the wallet side.</li>
             <li class="q">Does the Reown relay accept a session with two chains in the same <code>tezos</code> namespace?</li>
             <li class="q">Does the WC2 protocol enforce account-per-chain in the session response?</li>
             <li class="q">Any rate limits or relay policy issues with a <code>tezos:</code> namespace for a non-mainnet chain?</li>
