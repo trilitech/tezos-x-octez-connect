@@ -32,6 +32,21 @@
     .badge-amber  { background: #451A03; color: var(--amber); }
     .badge-blue   { background: #1E3A5F; color: var(--blue); }
 
+    /* Tab navigation */
+    .tab-nav { background: var(--surface); border-bottom: 1px solid var(--border);
+               position: sticky; top: 0; z-index: 10; }
+    .tab-nav-inner { max-width: 960px; margin: 0 auto; padding: 0 2rem;
+                     display: flex; gap: 0; }
+    .tab-btn { background: none; border: none; color: var(--text-dim); cursor: pointer;
+               font-size: .9rem; font-weight: 500; padding: .9rem 1.5rem;
+               border-bottom: 2px solid transparent; transition: color .15s, border-color .15s; }
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn.active { color: var(--blue); border-bottom-color: var(--blue); }
+
+    /* Tab content */
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
     main { max-width: 960px; margin: 0 auto; padding: 2.5rem 2rem 4rem; }
 
     /* Section headers */
@@ -63,7 +78,7 @@
     .tp-matrix { background: var(--teal); }
     .tp-wc2 { background: var(--purple); }
 
-    /* Phase cards */
+    /* Phase cards (full, collapsible — used in Tab 2) */
     .phase { background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
              margin-bottom: 1.25rem; overflow: hidden; }
     .phase-header { display: flex; align-items: flex-start; gap: 1rem; padding: 1.25rem 1.5rem;
@@ -99,6 +114,27 @@
     .st-done     { background: #064E3B; color: var(--green); }
 
     .phase-body { padding: 0 1.5rem 1.5rem; border-top: 1px solid var(--border); }
+
+    /* Compact phase cards (overview tab) */
+    .phase-row { background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+                 margin-bottom: .75rem; overflow: hidden; }
+    .phase-row-header { display: flex; align-items: flex-start; gap: 1rem; padding: 1rem 1.25rem; }
+    .phase-row-meta { flex: 1; }
+    .phase-row-meta h3 { font-size: .95rem; font-weight: 600; margin-bottom: .15rem; }
+    .phase-row-meta .tagline { font-size: .82rem; color: var(--text-dim); margin-bottom: .4rem; }
+    .phase-row-outcome { padding: .4rem 1.25rem .65rem 1.25rem; border-top: 1px solid var(--border);
+                         font-size: .8rem; color: var(--text-dim); }
+    .phase-row-outcome strong { color: var(--green); }
+    .phase-row-outcome .gate { color: var(--red); font-weight: 600; }
+
+    /* Coloring for .p0..p6 on .phase-row */
+    .phase-row.p0 .phase-num { background: #1C1917; color: var(--amber); border: 2px solid var(--amber); }
+    .phase-row.p1 .phase-num { background: #1E2D45; color: var(--blue); border: 2px solid var(--blue); }
+    .phase-row.p2 .phase-num { background: #1E2D45; color: var(--blue); border: 2px solid var(--blue); }
+    .phase-row.p3 .phase-num { background: #064E3B; color: var(--green); border: 2px solid var(--green); }
+    .phase-row.p4 .phase-num { background: #134E4A; color: var(--teal); border: 2px solid var(--teal); }
+    .phase-row.p5 .phase-num { background: #2E1065; color: var(--purple); border: 2px solid var(--purple); }
+    .phase-row.p6 .phase-num { background: #1C1917; color: #FB923C; border: 2px solid #FB923C; }
 
     /* Two-col grid inside phase */
     .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-top: 1.25rem; }
@@ -165,8 +201,55 @@
     .e2e li { font-size: .82rem; color: var(--text-dim); padding: .2rem 0; }
     .e2e li code { font-size: .78rem; }
     .e2e li strong { color: var(--text); }
+    /* API reference table */
+    .api-table { width: 100%; border-collapse: collapse; font-size: .8rem; margin: .5rem 0 .25rem; }
+    .api-table th { text-align: left; padding: .3rem .6rem; color: var(--text-dim);
+                    border-bottom: 1px solid var(--border); font-size: .7rem;
+                    text-transform: uppercase; letter-spacing: .05em; }
+    .api-table td { padding: .35rem .6rem; border-bottom: 1px solid var(--border);
+                    vertical-align: top; color: var(--text-dim); font-size: .82rem; }
+    .api-table tr:last-child td { border-bottom: none; }
+    .api-table td:first-child { white-space: nowrap; color: var(--text); font-family: "JetBrains Mono","Fira Code",Consolas,monospace; }
+    .api-table code { font-size: .78rem; }
+
+    /* Sub-section heading inside phase body */
+    .sub-h { font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
+             color: var(--text-dim); margin: 1.25rem 0 .5rem; }
+
+    /* Spike / decision callout */
+    .spike { margin-top: 1.25rem; background: #1A1330; border: 1px solid var(--purple-dim);
+             border-radius: 8px; padding: .85rem 1.1rem; }
+    .spike h4 { font-size: .78rem; font-weight: 700; text-transform: uppercase;
+                letter-spacing: .05em; color: var(--purple); margin-bottom: .6rem; }
+    .spike ul { list-style: none; padding: 0; }
+    .spike li { font-size: .82rem; color: var(--text-dim); padding: .2rem 0;
+                display: flex; gap: .5rem; align-items: flex-start; }
+    .spike li::before { content: "→"; color: var(--purple-dim); flex-shrink: 0; }
+
+    /* Option box (A/B decisions) */
+    .opt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; margin-top: .75rem; }
+    .opt-box { background: var(--surface2); border: 1px solid var(--border-light);
+               border-radius: 6px; padding: .75rem 1rem; }
+    .opt-box.viable { border-color: var(--green-dim); }
+    .opt-box.nope { border-color: var(--red-dim); opacity: .7; }
+    .opt-box h5 { font-size: .78rem; font-weight: 700; margin-bottom: .4rem; }
+    .opt-box.viable h5 { color: var(--green); }
+    .opt-box.nope h5 { color: var(--red); }
+    .opt-box p { font-size: .8rem; color: var(--text-dim); line-height: 1.5; }
+
+    /* Numbered protocol steps */
+    .proto-steps { list-style: none; padding: 0; margin-top: .5rem; }
+    .proto-steps li { display: flex; gap: .75rem; align-items: flex-start;
+                      font-size: .85rem; color: var(--text-dim); padding: .4rem 0;
+                      border-bottom: 1px solid var(--border); }
+    .proto-steps li:last-child { border-bottom: none; }
+    .step-num { flex-shrink: 0; width: 20px; height: 20px; border-radius: 50%;
+                background: var(--surface2); border: 1px solid var(--border-light);
+                display: flex; align-items: center; justify-content: center;
+                font-size: .7rem; font-weight: 700; color: var(--text-dim); margin-top: .1rem; }
+
     @media (max-width: 640px) {
-      .obj-grid, .two-col { grid-template-columns: 1fr; }
+      .obj-grid, .two-col, .opt-grid { grid-template-columns: 1fr; }
       header h1 { font-size: 1.5rem; }
     }
   </style>
@@ -182,6 +265,17 @@
   <p class="meta">April 2026 &middot; Tezos X Adoption Team</p>
 </header>
 
+<nav class="tab-nav">
+  <div class="tab-nav-inner">
+    <button class="tab-btn active" onclick="switchTab('overview', this)">Overview</button>
+    <button class="tab-btn" onclick="switchTab('details', this)">Technical details</button>
+  </div>
+</nav>
+
+<!-- ══════════════════════════════════════════════════════
+     TAB 1 — OVERVIEW
+     ══════════════════════════════════════════════════════ -->
+<div id="tab-overview" class="tab-content active">
 <main>
 
   <!-- Context -->
@@ -251,72 +345,277 @@
     <div class="tp"><div class="tp-dot" style="background:#FB923C;"></div> Popup (PostMessage via window.open) — derisking for browser-extension-like UX (Phase 6)</div>
   </div>
 
+  <!-- Phase overview (compact) -->
+  <div class="section-title">Phases</div>
+
+  <div class="phase-row p0">
+    <div class="phase-row-header">
+      <div class="phase-num">0</div>
+      <div class="phase-row-meta">
+        <h3>Network prerequisites</h3>
+        <div class="tagline">L1 confirmed — Michelson chain ID known but pending distinct value</div>
+        <div class="phase-tags"><span class="tag tag-infra">infra</span></div>
+      </div>
+      <span class="phase-status st-progress">In Progress</span>
+    </div>
+    <div class="phase-row-outcome">
+      <strong>Outcome:</strong> L1 chain ID confirmed (<code>tezos:NetXH12Aer3be93</code>). Michelson chain ID pending infrastructure fix. <span class="gate">Gate for Phase 3.</span>
+    </div>
+  </div>
+
+  <div class="phase-row p1">
+    <div class="phase-row-header">
+      <div class="phase-num">1</div>
+      <div class="phase-row-meta">
+        <h3>Minimal wallet — Matrix P2P, single network</h3>
+        <div class="tagline">Web wallet (Vite + @airgap/beacon-wallet + Taquito), standard TZIP-10 over Matrix</div>
+        <div class="phase-tags">
+          <span class="tag tag-matrix">Matrix P2P</span>
+          <span class="tag tag-proto">TZIP-10</span>
+        </div>
+      </div>
+      <span class="phase-status st-todo">Not started</span>
+    </div>
+    <div class="phase-row-outcome">
+      <strong>Outcome:</strong> dApp pairs with wallet over Matrix, sends a tez transfer on L1, wallet signs and injects, operation confirmed on txpark. Headless REST API in place for all subsequent test phases.
+    </div>
+  </div>
+
+  <div class="phase-row p2">
+    <div class="phase-row-header">
+      <div class="phase-num">2</div>
+      <div class="phase-row-meta">
+        <h3>TZIP-10 protocol extension</h3>
+        <div class="tagline">Nouveau type <code>version_upgrade_request</code>, <code>networks[]</code> sur permission_request v3, routage sur operation_request</div>
+        <div class="phase-tags">
+          <span class="tag tag-matrix">Matrix P2P</span>
+          <span class="tag tag-proto">TZIP-10 delta</span>
+        </div>
+      </div>
+      <span class="phase-status st-todo">Not started</span>
+    </div>
+    <div class="phase-row-outcome">
+      <strong>Outcome:</strong> dApp sends two operations in one session — one to L1, one to Michelson interface (fake chain ID + local proxy) — wallet routes correctly. Backward compatibility with unpatched wallet proven via 5s timeout.
+    </div>
+  </div>
+
+  <div class="phase-row p3">
+    <div class="phase-row-header">
+      <div class="phase-num">3</div>
+      <div class="phase-row-meta">
+        <h3>Real chain execution — two distinct networks</h3>
+        <div class="tagline">Replace fake chain ID with real Michelson chain ID, confirm on-chain on both RPCs</div>
+        <div class="phase-tags">
+          <span class="tag tag-matrix">Matrix P2P</span>
+          <span class="tag tag-proto">real chains</span>
+        </div>
+      </div>
+      <span class="phase-status st-todo">Not started</span>
+    </div>
+    <div class="phase-row-outcome">
+      <strong>Outcome:</strong> Two operations in one session land on two distinct chains, confirmed independently on each RPC. <span class="gate">Blocked on Michelson infrastructure fix (Phase 0).</span>
+    </div>
+  </div>
+
+  <div class="phase-row p3">
+    <div class="phase-row-header">
+      <div class="phase-num" style="font-size:.7rem;">3b</div>
+      <div class="phase-row-meta">
+        <h3>UX demo — concrete use-case</h3>
+        <div class="tagline">Polished UI, screen recording — can run in parallel with Phase 3 using fake chain IDs</div>
+        <div class="phase-tags">
+          <span class="tag tag-matrix">Matrix P2P</span>
+          <span class="tag tag-ux">UX demo</span>
+        </div>
+      </div>
+      <span class="phase-status st-todo">Not started</span>
+    </div>
+    <div class="phase-row-outcome">
+      <strong>Outcome:</strong> Screen recording (real chain IDs) shareable with wallet teams. One pairing, one approval, L1 transfer + Michelson contract call in the same session.
+    </div>
+  </div>
+
+  <div class="phase-row p4">
+    <div class="phase-row-header">
+      <div class="phase-num">4</div>
+      <div class="phase-row-meta">
+        <h3>Cross-domain deployment</h3>
+        <div class="tagline">Wallet on a cloud domain, dApp on another — no transport change, pure deployment</div>
+        <div class="phase-tags">
+          <span class="tag tag-matrix">Matrix P2P</span>
+          <span class="tag tag-infra">deployment</span>
+        </div>
+      </div>
+      <span class="phase-status st-todo">Not started</span>
+    </div>
+    <div class="phase-row-outcome">
+      <strong>Outcome:</strong> Full multi-chain session works between two separate HTTPS domains. CORS issues with Matrix homeserver surfaced and resolved.
+    </div>
+  </div>
+
+  <div class="phase-row p5">
+    <div class="phase-row-header">
+      <div class="phase-num">5</div>
+      <div class="phase-row-meta">
+        <h3>WalletConnect v2 transport</h3>
+        <div class="tagline">Multi-chain WC2 session with two <code>tezos:</code> chains in a single session proposal</div>
+        <div class="phase-tags">
+          <span class="tag tag-wc2">WalletConnect v2</span>
+          <span class="tag tag-proto">CAIP-25</span>
+        </div>
+      </div>
+      <span class="phase-status st-todo">Not started</span>
+    </div>
+    <div class="phase-row-outcome">
+      <strong>Outcome:</strong> WC2 session spanning both <code>tezos:</code> chains established via Reown relay. <code>tezos_send</code> dispatched to each chain via <code>chainId</code> routing. Changes localized to <code>WalletConnectCommunicationClient</code> in Octez.connect.
+    </div>
+  </div>
+
+  <div class="phase-row p6">
+    <div class="phase-row-header">
+      <div class="phase-num">6</div>
+      <div class="phase-row-meta">
+        <h3>Popup model — PostMessage via window.open</h3>
+        <div class="tagline">dApp opens wallet as a popup — derisking the browser-extension-like UX pattern</div>
+        <div class="phase-tags">
+          <span class="tag tag-popup">Popup</span>
+          <span class="tag tag-ux">UX</span>
+        </div>
+      </div>
+      <span class="phase-status st-todo">Not started</span>
+    </div>
+    <div class="phase-row-outcome">
+      <strong>Outcome:</strong> Same multi-chain use-case works with a popup wallet. UX comparison between popup and Matrix QR pairing documented.
+    </div>
+  </div>
+
+  <!-- Tech stack -->
+  <div class="section-title">Tech stack</div>
+  <div class="dep-row">
+    <div class="dep">Vite (build tool)</div>
+    <div class="dep">@airgap/beacon-wallet</div>
+    <div class="dep">@airgap/beacon-dapp</div>
+    <div class="dep">@taquito/taquito</div>
+    <div class="dep">@taquito/signer (InMemorySigner)</div>
+    <div class="dep"><a href="https://walletconnect.com/sign">@walletconnect/sign-client</a></div>
+    <div class="dep">Matrix homeserver (papers.tech or octez.io)</div>
+    <div class="dep">Reown relay — Project ID: <code>fb4d4407a8fe167d79bd14b5afcc7230</code></div>
+    <div class="dep">Playwright (Phase 4 CORS detection, Phase 6 popup tests)</div>
+    <div class="dep">Previewnet RPC (txpark)</div>
+  </div>
+
+</main>
+</div><!-- end tab-overview -->
+
+
+<!-- ══════════════════════════════════════════════════════
+     TAB 2 — TECHNICAL DETAILS
+     ══════════════════════════════════════════════════════ -->
+<div id="tab-details" class="tab-content">
+<main>
+
   <!-- TEST INFRASTRUCTURE -->
   <div class="section-title">Test infrastructure</div>
-  <div class="context" style="border-color:var(--green);">
-    <h2>Headless wallet + agent test runner</h2>
-    <p>Each phase must be validatable by an automated agent, not just a human. The wallet exposes a headless mode and a local HTTP control API; a Node.js test runner drives the full flow without UI interaction.</p>
-  </div>
+  <p style="font-size:.875rem; color:var(--text-dim); margin-bottom:1.5rem;">Each phase is validated by an automated agent via HTTP, not a human. Both wallet and dApp expose a headless control API (<code>HEADLESS=1</code>). A Node.js test runner drives the full flow without UI interaction.</p>
 
-  <div class="two-col" style="margin-bottom:2rem;">
+  <div class="two-col" style="margin-bottom:1.5rem;">
     <div class="col-box">
-      <h4>Headless mode (<code>HEADLESS=1</code>) — both wallet and dApp</h4>
-      <ul>
-        <li>Launched with env flag or URL param: <code>?headless=1</code> — <strong>dev/test only, never built into production</strong></li>
-        <li>Wallet: auto-approves all <code>permission_request</code> and <code>operation_request</code>; auto-responds to <code>version_upgrade_request</code> with <code>version_upgrade_response</code> when <code>HEADLESS=1</code></li>
-        <li><strong>dApp</strong> exposes: <code>POST /request-permissions</code> — comportement selon le body : <strong>sans <code>networks</code></strong> (body vide ou <code>{}</code>) → flow v2 seulement, envoie uniquement <code>permission_request v2</code>, saute les étapes 2 et 3 (utilisé en Phase 1) ; <strong>avec <code>{ networks: [...] }</code></strong> → séquence 3 étapes complète (permission_request v2 → version_upgrade_request → permission_request v3 + networks[]) ; si le wallet ne répond pas à l'upgrade dans les 5s, reste en mode legacy v2 (utilisé en Phase 2+). <code>POST /request-permissions</code> bloque jusqu'à ce que l'URI soit générée (la génération de l'URI implique une initialisation async Matrix — le handler HTTP ne retourne pas avant que l'URI soit disponible) ; <code>GET /pairing-uri</code> — returns the URI generated by the last <code>/request-permissions</code> call ; <code>POST /request-operation</code> — triggers <code>dAppClient.requestOperation({ network?, operationDetails })</code>, returns <code>{ transactionHash }</code> ; <code>GET /last-op</code> — last <code>{ transactionHash }</code> ; <code>GET /last-permission</code> — last permission response: <code>{ version: "3", accounts: { chainId: { publicKey } } }</code> in v3 mode, <code>{ version: "2", publicKey }</code> in v2 mode ; <code>GET /last-handshake</code> — handshake trace: <code>{ step1: "acked", step2: "acked"|"timeout", step3: "acked"|null, mode: "v2"|"v3" }</code> — lets tests verify the correct code path was taken, not just the outcome ; <code>POST /reset</code></li>
-        <li><strong>Wallet</strong> exposes: <code>POST /connect</code> — accepts a dApp pairing URI and calls <code>WalletClient.addPeer()</code> programmatically; <code>GET /last-rpc-call</code> — returns <code>{ chainId, rpcUrl }</code> for the last <code>operation_request</code> routed (validates actual HTTP dispatch, not just log); <code>POST /reset</code></li>
-        <li><strong>Prerequisite spike before Phase 1 (≤ 2h):</strong> read <code>@airgap/beacon-sdk</code> source and answer two questions: (1) <strong>confirm pairing flow direction</strong> — assumption: dApp generates URI, wallet calls <code>addPeer()</code>; verify against SDK source before building; (2) <strong>TypeScript API surface</strong> — what changes are needed to <code>approvePermissionRequest</code> and <code>PermissionResponse</code> to support per-chain accounts? Also confirm that unpatched SDK ignores unknown message types (like <code>version_upgrade_request</code>) gracefully — no exception thrown that would break the session. Update headless API design and Phase 2 protocol spec accordingly. This spike is a hard gate — Phase 1 cannot start without it.</li>
-      </ul>
+      <h4>dApp API</h4>
+      <table class="api-table">
+        <thead><tr><th>Endpoint</th><th>Behaviour</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>POST /request-permissions</td>
+            <td>No body → v2 flow (Phase 1). <code>{networks:[…]}</code> → 3-step handshake. Blocks until Matrix URI is ready.</td>
+          </tr>
+          <tr>
+            <td>GET /pairing-uri</td>
+            <td>URI generated by the last /request-permissions call.</td>
+          </tr>
+          <tr>
+            <td>POST /request-operation</td>
+            <td>Body: <code>{network?, operationDetails}</code>. Returns <code>{transactionHash}</code>.</td>
+          </tr>
+          <tr>
+            <td>GET /last-permission</td>
+            <td>v3: <code>{version:"3", accounts:{chainId:{publicKey}}}</code><br>v2: <code>{version:"2", publicKey}</code></td>
+          </tr>
+          <tr>
+            <td>GET /last-handshake</td>
+            <td><code>{step1, step2, step3, mode}</code> — verifies the code path taken, not just the outcome.</td>
+          </tr>
+          <tr>
+            <td>GET /last-op</td>
+            <td><code>{transactionHash}</code> from last operation.</td>
+          </tr>
+          <tr>
+            <td>POST /reset</td>
+            <td>Clears all state.</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
     <div class="col-box">
-      <h4>Agent test runner (<code>test/run.ts</code>)</h4>
+      <h4>Wallet API</h4>
+      <table class="api-table">
+        <thead><tr><th>Endpoint</th><th>Behaviour</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>POST /connect</td>
+            <td>Accepts pairing URI, calls <code>WalletClient.addPeer()</code>. Auto-approves all requests when <code>HEADLESS=1</code>.</td>
+          </tr>
+          <tr>
+            <td>GET /last-rpc-call</td>
+            <td><code>{chainId, rpcUrl}</code> for the last <code>operation_request</code> routed — validates actual HTTP dispatch.</td>
+          </tr>
+          <tr>
+            <td>POST /wc2-ready</td>
+            <td>(Phase 5) Returns 200 once SignClient is initialized and listening for proposals.</td>
+          </tr>
+          <tr>
+            <td>POST /reset</td>
+            <td>Clears all state.</td>
+          </tr>
+        </tbody>
+      </table>
+      <h4 style="margin-top:1rem;">Test runner</h4>
       <ul>
-        <li>Phases 1–3, 5: HTTP-based — drives dApp and wallet via headless API endpoints. Phase 4 exception: HTTP-based + one lightweight Playwright step for CORS detection (CORS errors are browser-side; a Node.js test runner cannot observe them).</li>
-        <li>All URLs parameterised via env vars: <code>DAPP_URL</code> (default <code>localhost:5173</code>), <code>WALLET_URL</code> (default <code>localhost:5174</code>) — Phase 4 overrides these with deployed domains</li>
-        <li>Phase 6 exception: Playwright full-browser driver — wallet runs as a popup inside the browser, no HTTP server. Auto-approve via <code>?headless=1</code> URL param. Playwright controls both dApp page and popup window directly.</li>
-        <li>Each phase has its own test file: <code>test/phase1.ts</code> … <code>test/phase6.ts</code></li>
-        <li>Exit 0 = pass, exit 1 + diff = fail</li>
+        <li>Phases 1–4: HTTP-based. Phase 4 adds one Playwright step for CORS detection (browser-side only).</li>
+        <li>Phase 6: Playwright full-browser — wallet runs as popup, no HTTP server.</li>
+        <li>Env: <code>DAPP_URL</code> (default <code>localhost:5173</code>), <code>WALLET_URL</code> (default <code>localhost:5174</code>).</li>
+        <li>One file per phase: <code>test/phase1.ts</code> … <code>test/phase6.ts</code>. Exit 0 = pass.</li>
       </ul>
     </div>
   </div>
 
-  <pre style="margin-bottom:2rem;"><code><span class="cm">// test/phase1.ts — agent-runnable pattern (HTTP-based, no SDK access)</span>
-<span class="cm">// Pairing flow direction: dApp generates URI → test runner fetches → passes to wallet via POST /connect.</span>
-<span class="cm">// Assumption confirmed in prerequisite spike (read beacon-sdk source, verify addPeer() call site).</span>
+  <div class="spike">
+    <h4>Prerequisite spike — gate before Phase 1 (≤ 2h)</h4>
+    <ul>
+      <li>Confirm pairing flow direction in SDK source: assumption is dApp generates URI, wallet calls <code>addPeer()</code>.</li>
+      <li>Identify TypeScript changes needed on <code>approvePermissionRequest</code> and <code>PermissionResponse</code> to support per-chain accounts.</li>
+      <li>Confirm unpatched SDK silently ignores unknown message types (e.g. <code>version_upgrade_request</code>) — no exception thrown.</li>
+    </ul>
+  </div>
 
-<span class="cm">// 1. Trigger permissions (generates pairing URI on dApp side)</span>
+  <pre style="margin:1.5rem 0;"><code><span class="cm">// test/phase1.ts — HTTP-based, no SDK access</span>
 <span class="kw">await</span> <span class="fn">fetch</span>(<span class="str">`${DAPP_URL}/request-permissions`</span>, { <span class="prop">method</span>: <span class="str">'POST'</span> });
-<span class="cm">// 2. Fetch URI and pass to wallet</span>
 <span class="kw">const</span> <span class="prop">uri</span> = <span class="kw">await</span> <span class="fn">fetch</span>(<span class="str">`${DAPP_URL}/pairing-uri`</span>).<span class="fn">then</span>(r => r.<span class="fn">text</span>());
-<span class="kw">await</span> <span class="fn">fetch</span>(<span class="str">`${WALLET_URL}/connect`</span>, { <span class="prop">method</span>: <span class="str">'POST'</span>, <span class="prop">body</span>: uri }); <span class="cm">// wallet auto-approves</span>
-<span class="cm">// 3. Trigger operation, get hash</span>
+<span class="kw">await</span> <span class="fn">fetch</span>(<span class="str">`${WALLET_URL}/connect`</span>, { <span class="prop">method</span>: <span class="str">'POST'</span>, <span class="prop">body</span>: uri });
 <span class="kw">const</span> { <span class="prop">transactionHash</span>: <span class="prop">hash</span> } = <span class="kw">await</span> <span class="fn">fetch</span>(<span class="str">`${DAPP_URL}/request-operation`</span>, {
   <span class="prop">method</span>: <span class="str">'POST'</span>, <span class="prop">body</span>: <span class="fn">JSON.stringify</span>({ <span class="prop">operationDetails</span>: [{ <span class="prop">kind</span>: <span class="str">'transaction'</span>, <span class="prop">amount</span>: <span class="str">'1'</span>, <span class="prop">destination</span>: DEST }] })
 }).<span class="fn">then</span>(r => r.<span class="fn">json</span>());
-<span class="cm">// 4. Confirm on-chain</span>
-<span class="kw">await</span> <span class="fn">waitForConfirmation</span>(hash, L1_RPC);
-<span class="kw">const</span> <span class="prop">allOps</span> = <span class="kw">await</span> Promise.<span class="fn">all</span>([0,1,2,3].<span class="fn">map</span>(i =>
+<span class="kw">await</span> <span class="fn">waitForConfirmation</span>(hash, L1_RPC); <span class="cm">// polls /operations/${i} passes 0–3, 60s timeout</span>
+<span class="kw">const</span> <span class="prop">op</span> = (<span class="kw">await</span> Promise.<span class="fn">all</span>([0,1,2,3].<span class="fn">map</span>(i =>
   <span class="fn">fetch</span>(<span class="str">`${L1_RPC}/chains/main/blocks/head/operations/${i}`</span>).<span class="fn">then</span>(r => r.<span class="fn">json</span>())
-));
-<span class="kw">const</span> <span class="prop">op</span> = allOps.<span class="fn">flat</span>().<span class="fn">find</span>(o => o.hash === hash); <span class="cm">// all 4 passes — avoids false negative on reveal or other non-manager ops</span>
+))).<span class="fn">flat</span>().<span class="fn">find</span>(o => o.hash === hash);
 <span class="kw">assert</span>(op !== undefined, <span class="str">'operation not found on chain'</span>);</code></pre>
-
-  <div class="col-box" style="margin-bottom:2rem;">
-    <h4>Shared helper: <code>waitForConfirmation(hash, rpcUrl)</code></h4>
-    <ul>
-      <li>Polls <code>GET /chains/main/blocks/head/operations/${i}</code> for passes 0–3 every 2s (same pattern as the Phase 1 assertion) — flattens all 4 pass arrays with <code>.flat().find(o =&gt; o.hash === hash)</code>; resolves when the operation is found</li>
-      <li>Timeout after 60s → test fails</li>
-      <li>Returns block level on success</li>
-    </ul>
-  </div>
 
   <!-- PHASES -->
   <div class="section-title">Phases</div>
 
   <!-- Phase 0 -->
   <div class="phase p0">
-    <div class="phase-header">
+    <div class="phase-header" onclick="toggle(this)">
       <div class="phase-num">0</div>
       <div class="phase-meta">
         <h3>Network prerequisites</h3>
@@ -358,7 +657,7 @@
 
   <!-- Phase 1 -->
   <div class="phase p1">
-    <div class="phase-header">
+    <div class="phase-header" onclick="toggle(this)">
       <div class="phase-num">1</div>
       <div class="phase-meta">
         <h3>Minimal wallet — Matrix P2P, single network</h3>
@@ -413,13 +712,11 @@ client.<span class="fn">onOperationRequest</span>(<span class="kw">async</span> 
       <div class="e2e">
         <h4>E2E validation — <code>test/phase1.ts</code></h4>
         <ol>
-          <li><code>POST /request-permissions</code> on dApp (no body for Phase 1) — triggers <code>requestPermissions()</code> internally, generates pairing URI</li>
-          <li><code>GET /pairing-uri</code> on dApp returns non-empty URI string</li>
-          <li><code>POST /connect</code> on wallet with URI → wallet calls <code>WalletClient.addPeer()</code>, connects over Matrix, auto-approves</li>
-          <li><code>GET /last-permission</code> on dApp returns <code>{ version: "2", publicKey }</code> — permissions granted</li>
-          <li><code>POST /request-operation</code> on dApp with <code>{ operationDetails: [1 μtez transfer] }</code> → returns <code>{ transactionHash }</code></li>
-          <li><code>waitForConfirmation(hash, L1_RPC)</code> resolves within 60s</li>
-          <li>All 4 validation passes iterated — <code>await Promise.all([0,1,2,3].map(i =&gt; fetch(`${L1_RPC}/chains/main/blocks/head/operations/${i}`).then(r =&gt; r.json())))</code> → <code>.flat().find(o =&gt; o.hash === hash)</code> is not undefined (avoids false negative if operation lands in a pass other than manager pass 3)</li>
+          <li><code>POST /request-permissions</code> (no body) → <code>GET /pairing-uri</code> returns non-empty URI.</li>
+          <li><code>POST /connect</code> on wallet with URI → wallet connects over Matrix, auto-approves.</li>
+          <li><code>GET /last-permission</code> returns <code>{version:"2", publicKey}</code>.</li>
+          <li><code>POST /request-operation {operationDetails:[1 μtez transfer]}</code> → <code>waitForConfirmation(hash, L1_RPC)</code> resolves within 60s.</li>
+          <li>Operation found in all 4 passes: <code>[0,1,2,3].map(…).flat().find(o =&gt; o.hash === hash)</code> is defined.</li>
         </ol>
       </div>
     </div>
@@ -427,7 +724,7 @@ client.<span class="fn">onOperationRequest</span>(<span class="kw">async</span> 
 
   <!-- Phase 2 -->
   <div class="phase p2">
-    <div class="phase-header">
+    <div class="phase-header" onclick="toggle(this)">
       <div class="phase-num">2</div>
       <div class="phase-meta">
         <h3>TZIP-10 protocol extension</h3>
@@ -440,33 +737,46 @@ client.<span class="fn">onOperationRequest</span>(<span class="kw">async</span> 
       <span class="phase-status st-todo">Not started</span>
     </div>
     <div class="phase-body">
-      <p style="font-size:.875rem; color:var(--text-dim); margin-top:1rem;">Core protocol change. Extend the Beacon message format, implement on both sides, validate backward compatibility with an unpatched wallet. Both <code>@airgap/beacon-dapp</code> and <code>@airgap/beacon-wallet</code> need changes — the POC works from a fork of <code>@airgap/beacon-sdk</code>; monkey-patching a complex SDK is too fragile for multi-phase work.</p>
-      <p style="font-size:.875rem; color:var(--text-dim); margin-top:.5rem;"><strong>Phase 2 deliverables beyond the protocol:</strong> (1) Fake Michelson network points to a <strong>distinct local proxy</strong> (<code>http://localhost:9998/tezlink</code>) that logs requests and forwards to L1 RPC — routing validated at HTTP dispatch level, not just log. (2) <strong>Second headless wallet build</strong> using stock (unpatched) <code>@airgap/beacon-wallet</code> served at <code>WALLET_UNPATCHED_URL</code> for backward compat test. (3) <code>HEADLESS_APPROVE_NETWORKS=&lt;chainId&gt;</code> flag to limit which networks the wallet approves — enables subset approval test.</p>
+      <p style="font-size:.875rem; color:var(--text-dim); margin-top:1rem;">Core protocol change. Fork <code>@airgap/beacon-sdk</code> from day one — both dApp and wallet sides need changes, monkey-patching is too fragile. Also delivered: a local proxy at <code>localhost:9998</code> for Michelson routing validation, a second unpatched wallet build at <code>WALLET_UNPATCHED_URL</code> for backward compat, and a <code>HEADLESS_APPROVE_NETWORKS</code> flag for subset-approval tests.</p>
+
+      <div class="sub-h">Version negotiation — 3-step handshake</div>
+      <ul class="proto-steps">
+        <li>
+          <div class="step-num">1</div>
+          <div><code>permission_request v2</code> — standard TZIP-10. Session established, wallet confirmed alive.</div>
+        </li>
+        <li>
+          <div class="step-num">2</div>
+          <div><code>version_upgrade_request</code> (new type, 5s timeout). Response → wallet is v3-capable. Timeout → wallet is v2 legacy. No ambiguity: if the wallet was offline, step 1 would already have failed.</div>
+        </li>
+        <li>
+          <div class="step-num">3</div>
+          <div><code>permission_request v3</code> + <code>networks[]</code> — only sent if step 2 succeeded. Replaces the v2 session atomically. No silent fallback at this step — v3 was already confirmed.</div>
+        </li>
+      </ul>
+
       <div class="two-col">
         <div class="col-box">
-          <h4>Protocol delta</h4>
+          <h4>New / changed fields</h4>
           <ul>
-            <li><strong>Version negotiation en 3 étapes</strong> (aucune ambiguïté de timeout) :
-              <ol style="margin:.4rem 0 .4rem 1.2rem; font-size:.85rem; color:var(--text-dim);">
-                <li>dApp envoie <code>permission_request</code> <code>version: "2"</code> standard → session établie, wallet confirmé vivant</li>
-                <li>dApp envoie <code>version_upgrade_request</code> (nouveau type) avec <code>targetVersion: "3"</code> → timeout court ~5s. Si réponse reçue : wallet patché, v3 actif. Si timeout : wallet v2 (on sait qu'il est en ligne, donc timeout = pas de support v3) → mode legacy.</li>
-                <li>Si v3 confirmé : dApp envoie <code>permission_request</code> <code>version: "3"</code> + <code>networks[]</code> → wallet répond avec comptes indexés par chain. <strong>Sémantique du second permission_request :</strong> un second <code>permission_request</code> sur une session existante remplace la session précédente — le wallet écrase les permissions stockées. Ce comportement doit être implémenté explicitement dans le fork SDK (ne pas rejeter la requête comme erreur de protocole). Si l'étape 3 ne reçoit pas de réponse, le dApp tombe en erreur (pas de fallback silencieux — l'upgrade a déjà été confirmé à l'étape 2).</li>
-              </ol>
-              Le round-trip supplémentaire (étapes 1→2) est intentionnel pour cette version POC et pourra être supprimé en production une fois le support v3 largement déployé.
-            </li>
-            <li>Add <code>networks: NetworkInfo[]</code> to <code>permission_request</code> v3 — chaque entry contient <code>chainId</code> + <code>rpcUrl</code>. <strong>Coexistence <code>network</code> / <code>networks[]</code> :</strong> le champ <code>network</code> (singulier) est conservé en v3 uniquement pour compatibilité avec le parsing des vieux SDK — il ne définit pas de "réseau primaire". Un wallet v3 qui reçoit les deux champs utilise <code>networks[]</code> et ignore <code>network</code>. Cette règle doit figurer explicitement dans la TZIP.</li>
-            <li>Add <code>network: string</code> (bare CAIP-2 chain ID, e.g. <code>"tezos:NetXH12Aer3be93"</code>) to <code>operation_request</code> — <strong>required</strong> in multi-chain mode (v3), absent in legacy mode (v2 fallback). <em>Note de schéma :</em> contrairement au champ <code>network</code> de <code>permission_request</code> (objet <code>{ type, chainId?, rpcUrl? }</code>), le champ <code>network</code> de <code>operation_request</code> est un string plat — seul le chain ID est nécessaire pour le routing, pas les métadonnées réseau. Cette divergence de shape doit être documentée explicitement dans la TZIP.</li>
-            <li>No "primary network" concept — two clean modes, explicit version-negotiated</li>
-            <li><strong>SDK type changes required (confirmed in spike):</strong> <code>PermissionResponse</code> must gain an <code>accounts: Record&lt;chainId, { publicKey }&gt;</code> field; <code>approvePermissionRequest(request, { publicKey })</code> must be extended to accept per-chain accounts. The wallet builds a RPC URL registry keyed by chain ID from <code>permission_request.networks[].rpcUrl</code> — used to route subsequent <code>operation_request</code> messages. <em>Trust model caveat (hors scope POC) :</em> le wallet fait confiance à la dApp pour les URLs RPC — un nœud malveillant fourni par la dApp peut observer ou altérer les opérations. À adresser dans la TZIP : recommander que les wallets ignorent <code>rpcUrl</code> en faveur de leur propre nœud configuré, ou valident l'URL contre une liste connue.</li>
+            <li><code>networks: NetworkInfo[]</code> on <code>permission_request v3</code> — each entry: <code>{ chainId, rpcUrl }</code>. Wallet builds its RPC registry from this.</li>
+            <li><code>network</code> (singular) kept in v3 for old-SDK parse compat only. A v3 wallet ignores it when <code>networks[]</code> is present. Documented in TZIP.</li>
+            <li><code>network: string</code> on <code>operation_request</code> — bare CAIP-2 chain ID (e.g. <code>"tezos:NetXH12Aer3be93"</code>). Required in v3, absent in v2. Note: different shape from the object on <code>permission_request</code> — document in TZIP.</li>
+          </ul>
+          <h4 style="margin-top:1rem;">SDK changes</h4>
+          <ul>
+            <li><code>PermissionResponse</code> gains <code>accounts: Record&lt;chainId, {publicKey}&gt;</code></li>
+            <li><code>approvePermissionRequest()</code> extended to accept per-chain accounts map</li>
+            <li>Trust model caveat (out of scope): wallet trusts dApp-supplied RPC URLs. Flag for TZIP: wallets should prefer their own configured node over <code>rpcUrl</code>.</li>
           </ul>
         </div>
         <div class="col-box">
-          <h4>Derisking questions</h4>
+          <h4>Derisking</h4>
           <ul>
-            <li class="check">Backward compat — un wallet non-patché ne répond pas au <code>version_upgrade_request</code> (type inconnu, ignoré) → timeout 5s → dApp reste en mode legacy v2. L'ambiguïté "offline ou rejet ?" est levée : le wallet vient de répondre à la <code>permission_request</code> v2 à l'étape 1, donc on sait qu'il est en ligne. <em>Caveat: validé uniquement contre le SDK headless à <code>WALLET_UNPATCHED_URL</code> — les wallets production (Kukai, Temple) sont hors scope pour ce POC.</em></li>
-            <li class="q">What happens if the wallet approves only a subset of requested networks?</li>
-            <li class="q">Is the <code>network</code> field on <code>operation_request</code> sufficient or does the dApp need a separate per-network client?</li>
-            <li class="q">Session lifecycle: what happens if the user disconnects mid-session, or revokes access to one chain only? Beacon <code>disconnect</code> tears down the entire session — partial revoke is undefined in current TZIP-10. Out of scope for this POC but must be flagged in the TZIP proposal.</li>
+            <li class="check">Backward compat: unpatched wallet ignores <code>version_upgrade_request</code> (unknown type) → timeout 5s → dApp stays in v2 legacy. Validated with <code>WALLET_UNPATCHED_URL</code> headless build. Production wallets (Kukai, Temple) out of scope.</li>
+            <li class="q">What does the response look like when the wallet approves only a subset of requested networks?</li>
+            <li class="q">Does the dApp need a separate per-network Taquito client, or is the <code>network</code> field on <code>operation_request</code> enough?</li>
+            <li class="q">Session lifecycle: Beacon <code>disconnect</code> tears down the entire session — partial chain revoke is undefined in TZIP-10. Flag in TZIP proposal.</li>
           </ul>
         </div>
       </div>
@@ -505,11 +815,11 @@ client.<span class="fn">onOperationRequest</span>(<span class="kw">async</span> 
       <div class="e2e">
         <h4>E2E validation — <code>test/phase2.ts</code></h4>
         <ol>
-          <li><code>POST /request-permissions</code> with <code>{ networks: [L1, Michelson] }</code> → dApp exécute la séquence 3 étapes en interne → <code>GET /last-permission</code> confirme <code>version: "3"</code> et accounts pour les deux chain IDs → <code>GET /last-handshake</code> retourne <code>{ step1: "acked", step2: "acked", step3: "acked", mode: "v3" }</code></li>
-          <li><code>POST /request-operation</code> with <code>{ network: L1_CHAIN_ID, operationDetails: [...] }</code> → returns <code>{ transactionHash }</code> → <code>waitForConfirmation(hash, L1_RPC)</code> resolves; operation found on L1 RPC</li>
-          <li><code>POST /request-operation</code> with <code>{ network: "tezos:NetXfakechain1111", operationDetails: [...] }</code> → <code>GET /last-rpc-call</code> on wallet returns <code>{ chainId: "tezos:NetXfakechain1111", rpcUrl: "http://localhost:9998/tezlink" }</code> — confirms HTTP dispatch to the correct proxy endpoint, not just a log</li>
-          <li><strong>Subset approval</strong>: wallet launched with <code>HEADLESS_APPROVE_NETWORKS=tezos:NetXH12Aer3be93</code> (L1 only) → <code>POST /request-permissions</code> with both networks → <code>GET /last-permission</code> retourne <code>accounts</code> avec uniquement L1 (Michelson absent de la map, pas null) → <code>POST /request-operation</code> with L1 network succeeds → <code>POST /request-operation</code> with Michelson network returns well-formed error "chain not in session" (not a crash)</li>
-          <li><strong>Backward compat</strong>: repeat pairing against <code>WALLET_UNPATCHED_URL</code> (stock <code>@airgap/beacon-wallet</code>) → <code>permission_request</code> v2 réussit (wallet confirmé vivant) → <code>version_upgrade_request</code> sans réponse dans les 5s → <code>GET /last-handshake</code> retourne <code>{ step1: "acked", step2: "timeout", step3: null, mode: "v2" }</code> → <code>POST /request-operation</code> sans network resolves, lands on L1</li>
+          <li><strong>v3 handshake:</strong> <code>POST /request-permissions {networks:[L1, Michelson]}</code> → <code>GET /last-handshake</code> returns <code>{step1:"acked", step2:"acked", step3:"acked", mode:"v3"}</code> → <code>GET /last-permission</code> has accounts for both chain IDs.</li>
+          <li><strong>L1 routing:</strong> <code>POST /request-operation {network: L1_CHAIN_ID, …}</code> → <code>waitForConfirmation(hash, L1_RPC)</code> resolves.</li>
+          <li><strong>Michelson routing:</strong> <code>POST /request-operation {network: "tezos:NetXfakechain1111", …}</code> → <code>GET /last-rpc-call</code> returns <code>{chainId: "tezos:NetXfakechain1111", rpcUrl: "http://localhost:9998/tezlink"}</code> — validates HTTP dispatch to proxy, not just a log.</li>
+          <li><strong>Subset approval:</strong> wallet launched with <code>HEADLESS_APPROVE_NETWORKS=tezos:NetXH12Aer3be93</code> → permissions request with both chains → <code>GET /last-permission</code> has L1 only → operation on Michelson returns well-formed error "chain not in session" (no crash).</li>
+          <li><strong>Backward compat:</strong> pair against <code>WALLET_UNPATCHED_URL</code> → <code>GET /last-handshake</code> returns <code>{step2:"timeout", mode:"v2"}</code> → operation without <code>network</code> field resolves on L1.</li>
         </ol>
       </div>
     </div>
@@ -517,7 +827,7 @@ client.<span class="fn">onOperationRequest</span>(<span class="kw">async</span> 
 
   <!-- Phase 3 -->
   <div class="phase p3">
-    <div class="phase-header">
+    <div class="phase-header" onclick="toggle(this)">
       <div class="phase-num">3</div>
       <div class="phase-meta">
         <h3>Real chain execution — two distinct networks</h3>
@@ -547,7 +857,7 @@ client.<span class="fn">onOperationRequest</span>(<span class="kw">async</span> 
 
   <!-- Phase 3b -->
   <div class="phase p3">
-    <div class="phase-header">
+    <div class="phase-header" onclick="toggle(this)">
       <div class="phase-num" style="font-size:.7rem;">3b</div>
       <div class="phase-meta">
         <h3>UX demo — concrete use-case</h3>
@@ -598,7 +908,7 @@ client.<span class="fn">onOperationRequest</span>(<span class="kw">async</span> 
 
   <!-- Phase 4 -->
   <div class="phase p4">
-    <div class="phase-header">
+    <div class="phase-header" onclick="toggle(this)">
       <div class="phase-num">4</div>
       <div class="phase-meta">
         <h3>Cross-domain deployment</h3>
@@ -635,12 +945,9 @@ client.<span class="fn">onOperationRequest</span>(<span class="kw">async</span> 
       <div class="e2e">
         <h4>E2E validation — <code>test/phase4.ts</code></h4>
         <ol>
-          <li><code>POST https://dapp.&lt;domain&gt;/request-permissions</code> → dApp generates pairing URI</li>
-          <li><code>GET https://dapp.&lt;domain&gt;/pairing-uri</code> returns non-empty URI string</li>
-          <li><code>POST https://wallet.&lt;domain&gt;/connect</code> with URI → Matrix pairing completes over public internet</li>
-          <li><code>test/phase2.ts</code> assertions all pass against deployed URLs</li>
-          <li>Playwright ouvre la dApp dans un browser réel et inspecte la console : <strong>zéro CORS error</strong> (CORS étant browser-side, non observable depuis le test runner HTTP Node.js)</li>
-          <li>Matrix homeserver: median latency &lt; 3s over 5 consecutive messages ; aucun message ne dépasse 15s</li>
+          <li>Phase 2 assertions all pass against deployed URLs (<code>DAPP_URL=https://dapp.&lt;domain&gt;</code>, <code>WALLET_URL=https://wallet.&lt;domain&gt;</code>).</li>
+          <li>Playwright opens the dApp in a real browser: zero CORS errors in console. (CORS is browser-side only — invisible to the HTTP test runner.)</li>
+          <li>Matrix homeserver: median latency &lt; 3s over 5 consecutive messages; no message exceeds 15s.</li>
         </ol>
       </div>
     </div>
@@ -648,7 +955,7 @@ client.<span class="fn">onOperationRequest</span>(<span class="kw">async</span> 
 
   <!-- Phase 5 -->
   <div class="phase p5">
-    <div class="phase-header">
+    <div class="phase-header" onclick="toggle(this)">
       <div class="phase-num">5</div>
       <div class="phase-meta">
         <h3>WalletConnect v2 transport</h3>
@@ -675,20 +982,28 @@ client.<span class="fn">onOperationRequest</span>(<span class="kw">async</span> 
           </ul>
         </div>
         <div class="col-box">
-          <h4>Derisking questions</h4>
+          <h4>Design decision — gate before Phase 5</h4>
+          <p style="font-size:.82rem; color:var(--text-dim); margin-bottom:.75rem;">In Matrix/PostMessage, a v2 session exists before the upgrade handshake. In WC2, the session proposal <em>is</em> the first message — namespaces are negotiated atomically. Two options:</p>
+          <div class="opt-grid" style="margin-bottom:.75rem;">
+            <div class="opt-box viable">
+              <h5>Option A — WC2 native (viable)</h5>
+              <p>L1 in <code>requiredNamespaces</code>, Michelson in <code>optionalNamespaces</code>. WC2 session = step 1. Steps 2–3 (version_upgrade + permission v3) run in the established WC2 channel. <code>/last-handshake</code> returns <code>{step1:"wc2-session", …}</code>.</p>
+            </div>
+            <div class="opt-box nope">
+              <h5>Option B — opaque (non-viable)</h5>
+              <p>L1-only session proposal, Beacon v3 as opaque blobs. Breaks WC2 routing: <code>signClient.request({chainId: MICHELSON})</code> fails if Michelson is not in <code>session.namespaces</code>.</p>
+            </div>
+          </div>
+          <h4>Spike before Phase 5</h4>
           <ul>
-            <li class="block"><strong>Design decision — gate avant Phase 5 :</strong> le flow 3 étapes (permission v2 → version_upgrade_request → permission v3) s'applique à Matrix et PostMessage parce qu'une session est déjà établie avant l'upgrade. En WC2 il n'y a pas de "session v2 d'abord" — la session proposal WC2 <em>est</em> le premier message, et les namespaces sont négociés atomiquement. Deux options à décider :
-              <ul style="margin:.4rem 0 .4rem 1.2rem; font-size:.85rem; color:var(--text-dim);">
-                <li><strong>Option A — WC2 natif :</strong> session proposal inclut L1 en <code>requiredNamespaces</code> et Michelson en <code>optionalNamespaces</code>. Si le wallet approuve Michelson → session multi-chain établie. <strong>Mapping du handshake Beacon 3 étapes sur WC2 :</strong> l'étape 1 (permission_request v2) est remplacée par la WC2 session proposal — c'est elle qui confirme la liveness du wallet. Les étapes 2 (version_upgrade_request) et 3 (permission_request v3 + networks[]) transitent dans le canal WC2 établi après session. <code>/last-handshake</code> en WC2 retourne donc <code>{ step1: "wc2-session", step2: "acked"|"timeout", step3: "acked"|null, mode: "v2"|"v3" }</code>. <em>Attention :</em> un wallet v3 partial qui approuve seulement L1 donne une session WC2 valid avec length-1 — le dApp doit tester <code>chains.includes(MICHELSON)</code> pour détecter la capacité.</li>
-                <li><strong>Option B — WC2 opaque :</strong> session proposal avec L1 seulement, Beacon v3 en blob opaque dans les messages WC2. Problème : <code>signClient.request({ chainId: MICHELSON_CHAIN_ID })</code> ne peut pas router vers Michelson si ce chain n'est pas dans <code>session.namespaces</code>. Cette option casse le routing WC2 pour les opérations Michelson. <strong>Non viable.</strong></li>
-              </ul>
-              Option A est la seule option viable. Décision + owner requis avant d'écrire du code Phase 5.
-            </li>
-            <li class="block"><strong>Spike pré-Phase 5 requis :</strong> (1) confirmer empiriquement que WC2 fusionne required et optional namespaces sous la même clé <code>tezos</code> dans <code>session.namespaces</code> (vérifier dans la doc Reown / SDK source), et que cette structure est lisible par le dApp SDK — l'assertion <code>chains.includes(MICHELSON)</code> en step 3 dépend directement de cette réponse ; (2) confirmer le mapping du handshake Beacon 3 étapes sur WC2 : l'étape 1 est remplacée par la WC2 session proposal, les étapes 2–3 transitent dans le canal WC2 — vérifier que <code>version_upgrade_request</code> peut être envoyé comme message WC2 ordinaire après session establishment et que le wallet le reçoit via son handler. Résoudre avant d'écrire <code>test/phase5.ts</code>.</li>
-            <li class="q">Does the Reown relay accept a session with two chains in the same <code>tezos</code> namespace?</li>
-            <li class="q">Does the WC2 protocol enforce account-per-chain in the session response?</li>
-            <li class="q">Any rate limits or relay policy issues with a <code>tezos:</code> namespace for a non-mainnet chain?</li>
-            <li class="q">Is a CAIP-25 profile update needed for the Tezos namespace to be accepted?</li>
+            <li class="block">Confirm WC2 merges required + optional under the same <code>tezos</code> key in <code>session.namespaces</code> — the <code>chains.includes(MICHELSON)</code> assertion depends on this.</li>
+            <li class="block">Confirm <code>version_upgrade_request</code> can be sent as a plain WC2 message after session establishment and received by the wallet handler.</li>
+          </ul>
+          <h4 style="margin-top:1rem;">Open questions</h4>
+          <ul>
+            <li class="q">Does the Reown relay accept two chains in the same <code>tezos</code> namespace?</li>
+            <li class="q">Rate limits or relay policy issues with a non-mainnet <code>tezos:</code> chain?</li>
+            <li class="q">CAIP-25 profile update needed for the Tezos namespace?</li>
           </ul>
         </div>
       </div>
@@ -713,12 +1028,12 @@ client.<span class="fn">onOperationRequest</span>(<span class="kw">async</span> 
       <div class="e2e">
         <h4>E2E validation — <code>test/phase5.ts</code></h4>
         <ol>
-          <li><strong>Prerequisite:</strong> Reown relay accessible — <code>fetch("https://relay.walletconnect.com/health")</code> resolves with 2xx before the test starts</li>
-          <li><code>signClient.connect({ requiredNamespaces, optionalNamespaces })</code> resolves without error ; poll <code>GET /last-handshake</code> every 500ms (timeout 10s) until <code>{ mode: "v3" }</code> — the Beacon v3 exchange (version_upgrade_request + permission_request v3) runs asynchronously inside the WC2 channel after session establishment and may not be complete at the moment connect() resolves</li>
-          <li><code>session.namespaces.tezos.chains</code> contains both <code>tezos:NetXH12Aer3be93</code> and <code>tezos:&lt;MICHELSON_CHAIN_ID&gt;</code> — assert <code>chains.includes(L1_CHAIN_ID) &amp;&amp; chains.includes(MICHELSON_CHAIN_ID)</code>. Note: WC2 fusionne required et optional sous la même clé dans <code>session.namespaces</code> — le wallet patché doit implémenter ce merge dans <code>signClient.approve()</code>. Un wallet headless qui n'approuve que le required produirait length-1 (WC2-valide), donc l'assertion dépend du auto-approve complet.</li>
-          <li><code>POST /request-operation</code> with <code>{ network: L1_CHAIN_ID, operationDetails: [...] }</code> → <code>{ transactionHash }</code> → <code>waitForConfirmation(hash, L1_RPC)</code> resolves — dApp traduit en interne <code>operation_request.network</code> → <code>signClient.request({ chainId: L1_CHAIN_ID })</code></li>
-          <li><code>POST /request-operation</code> with <code>{ network: MICHELSON_CHAIN_ID, operationDetails: [...] }</code> → <code>{ transactionHash }</code> → <code>waitForConfirmation(hash, MICHELSON_RPC)</code> resolves — valide que le routing Beacon <code>operation_request.network</code> → WC2 <code>chainId</code> fonctionne correctement (Objectif 2 + 3)</li>
-          <li>No <code>Error</code> or <code>reject</code> response from Reown relay throughout</li>
+          <li><strong>Prereq:</strong> <code>fetch("https://relay.walletconnect.com/health")</code> returns 2xx.</li>
+          <li><code>signClient.connect({requiredNamespaces, optionalNamespaces})</code> resolves → poll <code>GET /last-handshake</code> every 500ms (timeout 10s) until <code>{mode:"v3"}</code>. (Beacon v3 exchange runs async inside WC2 after session; may not be complete when <code>connect()</code> resolves.)</li>
+          <li><code>session.namespaces.tezos.chains.includes(L1) &amp;&amp; chains.includes(MICHELSON)</code> — both chains present.</li>
+          <li><strong>L1:</strong> <code>POST /request-operation {network: L1_CHAIN_ID, …}</code> → <code>waitForConfirmation(hash, L1_RPC)</code> resolves.</li>
+          <li><strong>Michelson:</strong> <code>POST /request-operation {network: MICHELSON_CHAIN_ID, …}</code> → <code>waitForConfirmation(hash, MICHELSON_RPC)</code> resolves.</li>
+          <li>No <code>Error</code> or <code>reject</code> from Reown relay throughout.</li>
         </ol>
       </div>
     </div>
@@ -726,7 +1041,7 @@ client.<span class="fn">onOperationRequest</span>(<span class="kw">async</span> 
 
   <!-- Phase 6 -->
   <div class="phase p6">
-    <div class="phase-header">
+    <div class="phase-header" onclick="toggle(this)">
       <div class="phase-num">6</div>
       <div class="phase-meta">
         <h3>Popup model — PostMessage via window.open</h3>
@@ -764,36 +1079,37 @@ client.<span class="fn">onOperationRequest</span>(<span class="kw">async</span> 
       <div class="e2e">
         <h4>E2E validation — <code>test/phase6.ts</code> (Playwright)</h4>
         <ol>
-          <li><strong>Avant de cliquer :</strong> enregistrer le listener popup — <code>const popupPromise = context.waitForEvent('page')</code> — puis Playwright clicks "Connect" → <code>window.open</code> déclenché. <code>const popupPage = await popupPromise</code> capture le popup. L'enregistrement doit précéder le click pour éviter la race condition (event perdu si le popup s'ouvre avant le listener).</li>
-          <li>PostMessage handshake logs appear in both windows within 2s</li>
-          <li><code>test/phase2.ts</code> assertions all pass via popup transport — <em>exception :</em> le sub-test backward compat (Phase 2 step 5, <code>WALLET_UNPATCHED_URL</code>) est exclu de Phase 6 : il nécessite un second serveur wallet HTTP qui n'existe pas en mode popup. Les steps 1–4 de Phase 2 (handshake v3, routing L1, routing Michelson, subset approval) s'appliquent.</li>
-          <li>Popup window stays open across multiple operations in the same session ; fermeture uniquement à la fin de la session. Deux messages distincts dans le protocole popup : <code>{ type: "beacon_operation_done", transactionHash }</code> — envoyé après chaque <code>approveOperationRequest</code>, popup reste ouvert ; <code>{ type: "beacon_done" }</code> — envoyé à la fermeture de session (<code>requestDisconnect()</code> ou session explicitement terminée), dApp appelle <code>popupPage.close()</code>. Test Playwright : popup capturé via <code>const popupPage = await context.waitForEvent('page')</code> → après les deux opérations et le disconnect, <code>await popupPage.waitForEvent('close')</code> resolves (pas <code>page.isClosed()</code> qui teste la page principale du dApp, pas le popup).</li>
-          <li>Latency measured: time from <code>requestOperation</code> to <code>transactionHash</code> — recorded for comparison with Matrix baseline</li>
+          <li>Register popup listener <em>before</em> clicking: <code>const popupPromise = context.waitForEvent('page')</code> → click "Connect" → <code>const popupPage = await popupPromise</code>. Order matters — event is lost if popup opens before listener.</li>
+          <li>PostMessage handshake logs appear in both windows within 2s.</li>
+          <li>Phase 2 steps 1–4 pass via popup transport (backward compat step excluded — no second HTTP wallet server in popup mode).</li>
+          <li>Popup lifecycle: stays open across operations (<code>beacon_operation_done</code> per op), closes only at session end (<code>beacon_done</code> → dApp calls <code>popupPage.close()</code>). Assert with <code>await popupPage.waitForEvent('close')</code>, not <code>page.isClosed()</code> (that tests the dApp page).</li>
+          <li>Latency from <code>requestOperation</code> to <code>transactionHash</code> recorded for comparison with Matrix baseline.</li>
         </ol>
       </div>
     </div>
   </div>
 
-  <!-- Tech stack -->
-  <div class="section-title">Tech stack</div>
-  <div class="dep-row">
-    <div class="dep">Vite (build tool)</div>
-    <div class="dep">@airgap/beacon-wallet</div>
-    <div class="dep">@airgap/beacon-dapp</div>
-    <div class="dep">@taquito/taquito</div>
-    <div class="dep">@taquito/signer (InMemorySigner)</div>
-    <div class="dep"><a href="https://walletconnect.com/sign">@walletconnect/sign-client</a></div>
-    <div class="dep">Matrix homeserver (papers.tech or octez.io)</div>
-    <div class="dep">Reown relay — Project ID: <code>fb4d4407a8fe167d79bd14b5afcc7230</code></div>
-    <div class="dep">Playwright (Phase 4 CORS detection, Phase 6 popup tests)</div>
-    <div class="dep">Previewnet RPC (txpark)</div>
-  </div>
-
 </main>
+</div><!-- end tab-details -->
 
 <footer>
   Tezos X Beacon Multi-chain POC &middot; April 2026 &middot; Internal
 </footer>
 
+<script>
+  function switchTab(id, btn) {
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+    document.getElementById('tab-' + id).classList.add('active');
+    btn.classList.add('active');
+  }
+
+  function toggle(header) {
+    const body = header.nextElementSibling;
+    if (body && body.classList.contains('phase-body')) {
+      body.style.display = body.style.display === 'none' ? '' : 'none';
+    }
+  }
+</script>
 </body>
 </html>
