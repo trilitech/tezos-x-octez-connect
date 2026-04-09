@@ -314,14 +314,14 @@
       <thead><tr><th>Interface</th><th>Chain ID</th><th>RPC</th></tr></thead>
       <tbody>
         <tr>
-          <td>Tezos L1</td>
-          <td><code>tezos:NetXH12Aer3be93</code></td>
-          <td class="tbd"><code>&lt;L1_SHADOWNET_RPC&gt;</code> — direct L1 node, pending txpark exposure</td>
+          <td>Tezos L1 (shadownet)</td>
+          <td><code>tezos:NetXsqzbfFenSTS</code></td>
+          <td><code>https://rpc.shadownet.teztnets.com</code></td>
         </tr>
         <tr>
-          <td>Michelson interface</td>
+          <td>Michelson interface (L2)</td>
           <td class="tbd"><code>tezos:&lt;MICHELSON_CHAIN_ID&gt;</code> — pending fix</td>
-          <td><code>https://demo.txpark.nomadic-labs.com/rpc/tezlink</code> <span class="tbd">(dedicated endpoint pending)</span></td>
+          <td><code>https://demo.txpark.nomadic-labs.com/rpc/tezlink</code> <span class="tbd">(currently proxies to L1 — own chain ID pending)</span></td>
         </tr>
         <tr>
           <td>EVM interface</td>
@@ -359,7 +359,7 @@
       <span class="phase-status st-progress">In Progress</span>
     </div>
     <div class="phase-row-outcome">
-      <strong>Outcome:</strong> L1 chain ID confirmed (<code>tezos:NetXH12Aer3be93</code>) via direct L1 node. Michelson chain ID and L1 RPC endpoint pending infrastructure. <span class="gate">Gate for Phase 3.</span>
+      <strong>Outcome:</strong> L1 chain ID confirmed — <code>tezos:NetXsqzbfFenSTS</code> via shadownet (<code>rpc.shadownet.teztnets.com</code>). Michelson interface (L2) chain ID pending infrastructure fix. <span class="gate">Gate for Phase 3.</span>
     </div>
   </div>
 
@@ -631,15 +631,14 @@
         <div class="col-box">
           <h4>Known chain IDs</h4>
           <ul>
-            <li class="check">L1: <code>tezos:NetXH12Aer3be93</code> — must be confirmed via direct L1 node, not tezlink (tezlink currently proxies to L1 due to a bug; once fixed it becomes the Michelson interface)</li>
-            <li class="check">Michelson interface: currently same chain ID as L1 — same bug</li>
+            <li class="check">L1 (shadownet): <code>tezos:NetXsqzbfFenSTS</code> — confirmed via <code>curl https://rpc.shadownet.teztnets.com/chains/main/chain_id</code></li>
+            <li class="check">Michelson interface (L2): tezlink currently proxies to L1 and returns <code>NetXsqzbfFenSTS</code> — this is the known infrastructure bug (L2 runtime not yet deployed)</li>
             <li class="check">EVM interface: <code>eip155:127124</code></li>
           </ul>
           <h4 style="margin-top:1rem;">Pending (infrastructure)</h4>
           <ul>
-            <li class="block">Direct L1 RPC endpoint not exposed by txpark — required for L1 operations (wallet uses it for Taquito) and for chain ID confirmation</li>
-            <li class="block">Michelson interface chain ID becoming distinct from L1 — fix in progress</li>
-            <li class="block">Dedicated RPC endpoint for Michelson interface (tezlink, once decoupled from L1)</li>
+            <li class="block">Michelson interface (L2) own chain ID — tezlink must stop proxying to L1 and expose the L2 runtime's chain ID</li>
+            <li class="block">Dedicated tezlink endpoint that routes to the L2 runtime (not L1)</li>
           </ul>
         </div>
         <div class="col-box">
@@ -651,8 +650,8 @@
           </ul>
         </div>
       </div>
-      <div class="outcome"><strong>Validation:</strong> <code>curl &lt;L1_SHADOWNET_RPC&gt;/chains/main/chain_id</code> returns <code>"NetXH12Aer3be93"</code> — via the direct L1 node, not tezlink (tezlink currently returns the same value due to the proxy bug, but will return the Michelson chain ID once fixed). Michelson interface chain ID to be confirmed via tezlink once the bug is fixed.</div>
-      <div class="blocker"><strong>Gate:</strong> Phase 1 cannot start without a direct L1 RPC endpoint (txpark needs to expose it — PE says this may require a txpark evolution). Phase 3 additionally requires the Michelson chain ID and dedicated tezlink endpoint.</div>
+      <div class="outcome"><strong>Validation:</strong> <code>curl https://rpc.shadownet.teztnets.com/chains/main/chain_id</code> → <code>"NetXsqzbfFenSTS"</code> ✓. Michelson interface (L2) chain ID to be confirmed via tezlink once the L2 runtime is deployed.</div>
+      <div class="blocker"><strong>Gate for Phase 3:</strong> Michelson interface L2 chain ID and dedicated tezlink endpoint. L1 (shadownet) is fully available — no blocker for Phases 1–2.</div>
     </div>
   </div>
 
@@ -694,7 +693,7 @@
       </div>
       <pre><code><span class="cm">// wallet — core pattern</span>
 <span class="kw">const</span> <span class="prop">signer</span> = <span class="kw">await</span> InMemorySigner.<span class="fn">fromSecretKey</span>(<span class="str">'edsk...'</span>);
-<span class="kw">const</span> <span class="prop">Tezos</span> = <span class="kw">new</span> <span class="fn">TezosToolkit</span>(<span class="str">'&lt;L1_SHADOWNET_RPC&gt;'</span>); <span class="cm">// direct L1 node — not tezlink</span>
+<span class="kw">const</span> <span class="prop">Tezos</span> = <span class="kw">new</span> <span class="fn">TezosToolkit</span>(<span class="str">'https://rpc.shadownet.teztnets.com'</span>); <span class="cm">// L1 shadownet — not tezlink (L2)</span>
 Tezos.<span class="fn">setSignerProvider</span>(signer);
 
 <span class="kw">const</span> <span class="prop">client</span> = <span class="kw">new</span> <span class="fn">WalletClient</span>({ <span class="prop">name</span>: <span class="str">"Tezos X Wallet POC"</span> });
@@ -762,7 +761,7 @@ client.<span class="fn">onOperationRequest</span>(<span class="kw">async</span> 
           <ul>
             <li><code>networks: NetworkInfo[]</code> on <code>permission_request v3</code> — each entry: <code>{ chainId, rpcUrl }</code>. Wallet builds its RPC registry from this.</li>
             <li><code>network</code> (singular) kept in v3 for old-SDK parse compat only. A v3 wallet ignores it when <code>networks[]</code> is present. Documented in TZIP.</li>
-            <li><code>network: string</code> on <code>operation_request</code> — bare CAIP-2 chain ID (e.g. <code>"tezos:NetXH12Aer3be93"</code>). Required in v3, absent in v2. Note: different shape from the object on <code>permission_request</code> — document in TZIP.</li>
+            <li><code>network: string</code> on <code>operation_request</code> — bare CAIP-2 chain ID (e.g. <code>"tezos:NetXsqzbfFenSTS"</code>). Required in v3, absent in v2. Note: different shape from the object on <code>permission_request</code> — document in TZIP.</li>
           </ul>
           <h4 style="margin-top:1rem;">SDK changes</h4>
           <ul>
@@ -783,7 +782,7 @@ client.<span class="fn">onOperationRequest</span>(<span class="kw">async</span> 
       </div>
       <pre><code><span class="cm">// Étape 1 — établir la session v2 (toujours compatible)</span>
 { <span class="prop">type</span>: <span class="str">"permission_request"</span>, <span class="prop">version</span>: <span class="str">"2"</span>,
-  <span class="prop">network</span>: { <span class="prop">type</span>: <span class="str">"custom"</span>, <span class="prop">chainId</span>: <span class="str">"tezos:NetXH12Aer3be93"</span> }, <span class="prop">scopes</span>: [<span class="str">"operation_request"</span>] }
+  <span class="prop">network</span>: { <span class="prop">type</span>: <span class="str">"custom"</span>, <span class="prop">chainId</span>: <span class="str">"tezos:NetXsqzbfFenSTS"</span> }, <span class="prop">scopes</span>: [<span class="str">"operation_request"</span>] }
 <span class="cm">// → { version: "2", publicKey: "edpk..." }   wallet vivant confirmé</span>
 
 <span class="cm">// Étape 2 — sonder la capacité v3 (timeout court ~5s)</span>
@@ -795,16 +794,16 @@ client.<span class="fn">onOperationRequest</span>(<span class="kw">async</span> 
 <span class="cm">// Étape 3 — permission multi-chain (seulement si v3 confirmé)</span>
 {
   <span class="prop">type</span>: <span class="str">"permission_request"</span>, <span class="prop">version</span>: <span class="str">"3"</span>,
-  <span class="prop">network</span>: { <span class="prop">type</span>: <span class="str">"custom"</span>, <span class="prop">chainId</span>: <span class="str">"tezos:NetXH12Aer3be93"</span> }, <span class="cm">// compat parsing uniquement — ignoré par un wallet v3 si networks[] présent</span>
+  <span class="prop">network</span>: { <span class="prop">type</span>: <span class="str">"custom"</span>, <span class="prop">chainId</span>: <span class="str">"tezos:NetXsqzbfFenSTS"</span> }, <span class="cm">// compat parsing uniquement — ignoré par un wallet v3 si networks[] présent</span>
   <span class="prop">networks</span>: [
-    { <span class="prop">type</span>: <span class="str">"custom"</span>, <span class="prop">name</span>: <span class="str">"Tezos L1"</span>, <span class="prop">chainId</span>: <span class="str">"tezos:NetXH12Aer3be93"</span>,
-      <span class="prop">rpcUrl</span>: <span class="str">"&lt;L1_SHADOWNET_RPC&gt;"</span> },  <span class="cm">// direct L1 node — not tezlink</span>
+    { <span class="prop">type</span>: <span class="str">"custom"</span>, <span class="prop">name</span>: <span class="str">"Tezos L1"</span>, <span class="prop">chainId</span>: <span class="str">"tezos:NetXsqzbfFenSTS"</span>,
+      <span class="prop">rpcUrl</span>: <span class="str">"https://rpc.shadownet.teztnets.com"</span> },
     { <span class="prop">type</span>: <span class="str">"custom"</span>, <span class="prop">name</span>: <span class="str">"Michelson interface"</span>, <span class="prop">chainId</span>: <span class="str">"tezos:NetXfakechain1111"</span>,
       <span class="prop">rpcUrl</span>: <span class="str">"http://localhost:9998/tezlink"</span> }  <span class="cm">// proxy local Phase 2</span>
   ],
   <span class="prop">scopes</span>: [<span class="str">"operation_request"</span>]
 }
-<span class="cm">// → { version: "3", accounts: { "tezos:NetXH12Aer3be93": { publicKey: "..." },</span>
+<span class="cm">// → { version: "3", accounts: { "tezos:NetXsqzbfFenSTS": { publicKey: "..." },</span>
 <span class="cm">//                               "tezos:NetXfakechain1111": { publicKey: "..." } } }</span>
 
 <span class="cm">// operation_request — network requis en mode v3, absent en mode legacy v2</span>
@@ -819,7 +818,7 @@ client.<span class="fn">onOperationRequest</span>(<span class="kw">async</span> 
           <li><strong>v3 handshake:</strong> <code>POST /request-permissions {networks:[L1, Michelson]}</code> → <code>GET /last-handshake</code> returns <code>{step1:"acked", step2:"acked", step3:"acked", mode:"v3"}</code> → <code>GET /last-permission</code> has accounts for both chain IDs.</li>
           <li><strong>L1 routing:</strong> <code>POST /request-operation {network: L1_CHAIN_ID, …}</code> → <code>waitForConfirmation(hash, L1_RPC)</code> resolves.</li>
           <li><strong>Michelson routing:</strong> <code>POST /request-operation {network: "tezos:NetXfakechain1111", …}</code> → <code>GET /last-rpc-call</code> returns <code>{chainId: "tezos:NetXfakechain1111", rpcUrl: "http://localhost:9998/tezlink"}</code> — validates HTTP dispatch to proxy, not just a log.</li>
-          <li><strong>Subset approval:</strong> wallet launched with <code>HEADLESS_APPROVE_NETWORKS=tezos:NetXH12Aer3be93</code> → permissions request with both chains → <code>GET /last-permission</code> has L1 only → operation on Michelson returns well-formed error "chain not in session" (no crash).</li>
+          <li><strong>Subset approval:</strong> wallet launched with <code>HEADLESS_APPROVE_NETWORKS=tezos:NetXsqzbfFenSTS</code> → permissions request with both chains → <code>GET /last-permission</code> has L1 only → operation on Michelson returns well-formed error "chain not in session" (no crash).</li>
           <li><strong>Backward compat:</strong> pair against <code>WALLET_UNPATCHED_URL</code> → <code>GET /last-handshake</code> returns <code>{step2:"timeout", mode:"v2"}</code> → operation without <code>network</code> field resolves on L1.</li>
         </ol>
       </div>
@@ -1012,7 +1011,7 @@ client.<span class="fn">onOperationRequest</span>(<span class="kw">async</span> 
 {
   <span class="prop">requiredNamespaces</span>: {
     <span class="prop">tezos</span>: {
-      <span class="prop">chains</span>: [<span class="str">"tezos:NetXH12Aer3be93"</span>],   <span class="cm">// L1</span>
+      <span class="prop">chains</span>: [<span class="str">"tezos:NetXsqzbfFenSTS"</span>],   <span class="cm">// L1</span>
       <span class="prop">methods</span>: [<span class="str">"tezos_getAccounts"</span>, <span class="str">"tezos_send"</span>, <span class="str">"tezos_sign"</span>],
       <span class="prop">events</span>: []
     }
