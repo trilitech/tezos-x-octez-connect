@@ -709,7 +709,7 @@ client.<span class="fn">onOperationRequest</span>(<span class="kw">async</span> 
           <li><code>POST /request-permissions</code> (no body) → <code>GET /pairing-uri</code> returns non-empty URI.</li>
           <li><code>POST /connect</code> on wallet with URI → wallet connects over Matrix, auto-approves.</li>
           <li><code>GET /last-permission</code> returns <code>{version:"2", publicKey}</code>.</li>
-          <li><code>POST /request-operation {operationDetails:[1 μtez transfer]}</code> → <code>waitForConfirmation(hash, L1_RPC)</code> resolves within 60s.</li>
+          <li><code>POST /request-operation {operationDetails:[{kind:"transaction", amount:"1", destination: DEST}]}</code> → <code>waitForConfirmation(hash, L1_RPC)</code> resolves within 60s.</li>
           <li>Operation found in all 4 passes: <code>[0,1,2,3].map(…).flat().find(o =&gt; o.hash === hash)</code> is defined.</li>
         </ol>
       </div>
@@ -755,7 +755,7 @@ client.<span class="fn">onOperationRequest</span>(<span class="kw">async</span> 
           <ul>
             <li><code>networks: NetworkInfo[]</code> on <code>permission_request v3</code> — each entry: <code>{ chainId, rpcUrl }</code>. Wallet builds its RPC registry from this.</li>
             <li><code>network</code> (singular) kept in v3 for old-SDK parse compat only. A v3 wallet ignores it when <code>networks[]</code> is present. Documented in TZIP.</li>
-            <li><code>network: string</code> on <code>operation_request</code> — bare CAIP-2 chain ID (e.g. <code>"tezos:NetXsqzbfFenSTS"</code>). Required in v3, absent in v2. Note: different shape from the object on <code>permission_request</code> — document in TZIP.</li>
+            <li><code>network: string</code> on <code>operation_request</code> — bare CAIP-2 chain ID (e.g. <code>"tezos:NetXsqzbfFenSTS"</code>). Required in v3, absent in v2. Note: different shape from the object on <code>permission_request</code> — document in TZIP. <strong>Edge cases:</strong> v2 wallet receiving <code>operation_request</code> with a <code>network</code> field must ignore it (field is unknown in TZIP-10 v2 — unknown fields are silently dropped). v3 wallet receiving <code>operation_request</code> without <code>network</code> must return an error (<code>"network field required in v3 mode"</code>).</li>
           </ul>
           <h4 style="margin-top:1rem;">SDK changes</h4>
           <ul>
@@ -813,7 +813,7 @@ client.<span class="fn">onOperationRequest</span>(<span class="kw">async</span> 
           <li><strong>L1 routing:</strong> <code>POST /request-operation {network:"tezos:NetXsqzbfFenSTS", …}</code> → <code>GET /last-rpc-call</code> returns <code>{rpcUrl:"https://rpc.shadownet.teztnets.com"}</code> → <code>waitForConfirmation(hash, L1_RPC)</code> resolves.</li>
           <li><strong>Michelson routing:</strong> <code>POST /request-operation {network:"tezos:NetXH12Aer3be93", …}</code> → <code>GET /last-rpc-call</code> returns <code>{rpcUrl:"https://demo.txpark.nomadic-labs.com/rpc/tezlink"}</code> — validates HTTP dispatch to the correct endpoint.</li>
           <li><strong>Subset approval:</strong> wallet launched with <code>HEADLESS_APPROVE_NETWORKS=tezos:NetXsqzbfFenSTS</code> → permissions with both chains → <code>GET /last-permission</code> has L1 only → operation on Michelson returns "chain not in session" (no crash).</li>
-          <li><strong>Backward compat:</strong> pair against <code>WALLET_UNPATCHED_URL</code> → <code>GET /last-handshake</code> returns <code>{step2:"timeout", mode:"v2"}</code> → operation without <code>network</code> field resolves on L1.</li>
+          <li><strong>Backward compat:</strong> dApp sends <code>POST /request-permissions {networks:[L1, Michelson]}</code> against <code>WALLET_UNPATCHED_URL</code> → step 2 (version_upgrade_request) times out → dApp falls back to v2 → <code>GET /last-handshake</code> returns <code>{step1:"acked", step2:"timeout", step3:null, mode:"v2"}</code> → <code>POST /request-operation</code> without <code>network</code> field resolves on L1.</li>
         </ol>
       </div>
     </div>
@@ -1020,9 +1020,9 @@ client.<span class="fn">onOperationRequest</span>(<span class="kw">async</span> 
       <div class="e2e">
         <h4>E2E validation — <code>test/phase5.ts</code></h4>
         <ol>
-          <li><strong>Prereq:</strong> <code>fetch("https://relay.walletconnect.com/health")</code> returns 2xx.</li>
-          <li><code>signClient.connect({requiredNamespaces, optionalNamespaces})</code> resolves → poll <code>GET /last-handshake</code> every 500ms (timeout 10s) until <code>{mode:"v3"}</code>. (Beacon v3 exchange runs async inside WC2 after session; may not be complete when <code>connect()</code> resolves.)</li>
-          <li><code>session.namespaces.tezos.chains.includes(L1) &amp;&amp; chains.includes(MICHELSON)</code> — both chains present.</li>
+          <li><strong>Prereq:</strong> <code>fetch("https://relay.reown.com/health")</code> returns 2xx. (Reown relay, formerly relay.walletconnect.com — verify the correct health endpoint in Reown SDK docs before implementing.)</li>
+          <li><code>signClient.connect({requiredNamespaces, optionalNamespaces})</code> resolves → poll <code>GET /last-handshake</code> every 500ms (timeout 10s) until <code>{step1:"wc2-session", step2:"acked", step3:"acked", mode:"v3"}</code>. (Beacon v3 exchange — version_upgrade_request + permission_request v3 — runs async inside the WC2 channel after session establishment; may not be complete when <code>connect()</code> resolves.)</li>
+          <li><code>session.namespaces.tezos.chains.includes(L1_CHAIN_ID) &amp;&amp; session.namespaces.tezos.chains.includes(MICHELSON_CHAIN_ID)</code> — both chains present.</li>
           <li><strong>L1:</strong> <code>POST /request-operation {network: L1_CHAIN_ID, …}</code> → <code>waitForConfirmation(hash, L1_RPC)</code> resolves.</li>
           <li><strong>Michelson:</strong> <code>POST /request-operation {network: "tezos:NetXH12Aer3be93", …}</code> → <code>waitForConfirmation(hash, MICHELSON_RPC)</code> resolves.</li>
           <li>No <code>Error</code> or <code>reject</code> from Reown relay throughout.</li>
@@ -1074,7 +1074,7 @@ client.<span class="fn">onOperationRequest</span>(<span class="kw">async</span> 
           <li>Register popup listener <em>before</em> clicking: <code>const popupPromise = context.waitForEvent('page')</code> → click "Connect" → <code>const popupPage = await popupPromise</code>. Order matters — event is lost if popup opens before listener.</li>
           <li>PostMessage handshake logs appear in both windows within 2s.</li>
           <li>Phase 2 steps 1–4 pass via popup transport (backward compat step excluded — no second HTTP wallet server in popup mode).</li>
-          <li>Popup lifecycle: stays open across operations (<code>beacon_operation_done</code> per op), closes only at session end (<code>beacon_done</code> → dApp calls <code>popupPage.close()</code>). Assert with <code>await popupPage.waitForEvent('close')</code>, not <code>page.isClosed()</code> (that tests the dApp page).</li>
+          <li>Popup lifecycle: stays open across operations (<code>beacon_operation_done</code> per op), closes only at session end (<code>beacon_done</code> → dApp calls <code>popupPage.close()</code>). Assert with <code>await popupPage.waitForEvent('close')</code>, not <code>page.isClosed()</code> (that tests the dApp page). <em>Note: <code>beacon_operation_done</code> and <code>beacon_done</code> are Phase 6 popup transport signals sent via PostMessage between the popup and the opener — they are not Beacon/TZIP protocol messages and are not part of the TZIP extension defined in Phase 2.</em></li>
           <li>Latency from <code>requestOperation</code> to <code>transactionHash</code> recorded for comparison with Matrix baseline.</li>
         </ol>
       </div>
