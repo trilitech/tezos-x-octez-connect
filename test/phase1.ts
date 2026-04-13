@@ -5,7 +5,7 @@
  *   1. wallet running:  cd wallet && npm start           (port 5174)
  *   2. dapp running:    cd dapp && npm start             (port 5173)
  *   3. wallet funded:   https://faucet.shadownet.teztnets.com
- *      address: tz1VSUr8wwNhLAzempoch5d6hLRiTh8Cjcjb  (default WALLET_KEY)
+ *      address: tz1VSUr8wwNhLAzempoch5d6hLRiTh8Cjcjb  (key: edsk3QoqBuvdamxouPhin7swCvkQNgq4jP5KZPbwWNnwdZpSpJiEbq)
  *
  * Run: npm run test:phase1
  */
