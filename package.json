@@ -1,0 +1,12 @@
+{
+  "name": "tezos-x-octez-connect-poc",
+  "private": true,
+  "workspaces": ["wallet", "dapp"],
+  "scripts": {
+    "test:phase1": "tsx test/phase1.ts"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2",
+    "typescript": "^5.8.3"
+  }
+}
