@@ -1,3 +1,5 @@
+export {}  // ensure isolated module scope
+
 /**
  * Phase 1 — standard TZIP-10 over Matrix P2P, L1 only.
  *
