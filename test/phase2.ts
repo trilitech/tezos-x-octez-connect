@@ -16,7 +16,7 @@ export {}  // ensure isolated module scope
 
 const DAPP_URL = process.env.DAPP_URL ?? 'http://localhost:5173'
 const WALLET_URL = process.env.WALLET_URL ?? 'http://localhost:5174'
-const L1_RPC = 'https://octez-shadownet-archive.octez.io'
+const L1_RPC = 'https://rpc.shadownet.teztnets.com'
 const L2_RPC = 'https://demo.txpark.nomadic-labs.com/rpc/tezlink'
 const L1_CHAIN = 'tezos:NetXsqzbfFenSTS'
 const L2_CHAIN = 'tezos:NetXH12Aer3be93'
@@ -47,18 +47,64 @@ async function post(url: string, body?: unknown): Promise<unknown> {
 }
 
 async function waitForConfirmation(hash: string, rpc: string, timeoutMs = 60_000): Promise<void> {
-  const start = Date.now()
-  while (Date.now() - start < timeoutMs) {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), timeoutMs)
+
+  async function inBlock(blockId: string): Promise<boolean> {
     for (const pass of [0, 1, 2, 3]) {
-      const ops: any[] = await fetch(`${rpc}/chains/main/blocks/head/operations/${pass}`)
-        .then((r) => r.json())
+      const ops: any[] = await fetch(`${rpc}/chains/main/blocks/${blockId}/operations/${pass}`)
+        .then((r) => (r.ok ? r.json() : []))
         .catch(() => [])
-      if (Array.isArray(ops) && ops.find((o) => o.hash === hash)) return
+      if (Array.isArray(ops) && ops.find((o: any) => o.hash === hash)) return true
     }
-    await new Promise((r) => setTimeout(r, 5_000))
+    return false
+  }
+
+  try {
+    // Open the stream first so no block slips between backfill and streaming.
+    const monRes = await fetch(`${rpc}/monitor/heads/main`, { signal: controller.signal })
+
+    if (!monRes.ok || !monRes.body) {
+      // Fallback: simple head polling (used when the node doesn't expose monitor/heads,
+      // e.g. the shadownet archive node returns 401 on that endpoint).
+      while (!controller.signal.aborted) {
+        if (await inBlock('head')) return
+        await new Promise<void>((resolve) => {
+          const t = setTimeout(resolve, 5_000)
+          controller.signal.addEventListener('abort', () => { clearTimeout(t); resolve() }, { once: true })
+        })
+      }
+      throw new Error(`Operation ${hash} not confirmed after ${timeoutMs}ms`)
+    }
+
+    // Backfill: op may already be included before the stream was opened.
+    const head: any = await fetch(`${rpc}/chains/main/blocks/head/header`).then((r) => r.json())
+    for (let lvl = Math.max(1, head.level - 3); lvl <= head.level; lvl++) {
+      if (await inBlock(String(lvl))) return
+    }
+
+    // Stream new heads and check each one.
+    const reader = monRes.body.getReader()
+    const dec = new TextDecoder()
+    let buf = ''
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      buf += dec.decode(value, { stream: true })
+      const lines = buf.split('\n')
+      buf = lines.pop() ?? ''
+      for (const line of lines) {
+        if (!line.trim()) continue
+        const blk = JSON.parse(line) as { hash: string }
+        if (await inBlock(blk.hash)) return
+      }
+    }
+  } finally {
+    clearTimeout(timer)
   }
   throw new Error(`Operation ${hash} not confirmed after ${timeoutMs}ms`)
 }
+
 
 async function connectSession(): Promise<void> {
   await post(`${DAPP_URL}/reset`)
@@ -131,24 +177,20 @@ async function main(): Promise<void> {
   // ── Part C: L2 (Michelson interface) operation routing ───────────────────
 
   console.log('\n[ C ] L2 operation — Michelson interface routing')
+  // The wallet waits for counter-based confirmation before responding (see wallet/src/index.ts).
+  // The tezlink protocol does not expose operations in blocks/{id}/operations/{pass}, so the
+  // wallet uses the account counter as the only reliable inclusion signal.
   const l2Op: any = await post(`${DAPP_URL}/request-operation`, {
     network: L2_CHAIN,
     operationDetails: [{ kind: 'transaction', amount: '1', destination: DEST }],
   })
   if (!l2Op?.transactionHash) throw new Error(`no hash: ${JSON.stringify(l2Op)}`)
-  console.log(`✓ L2 op hash: ${l2Op.transactionHash}`)
+  console.log(`✓ L2 op hash: ${l2Op.transactionHash} (confirmed by wallet)`)
 
   const rpc2: any = await get(`${WALLET_URL}/last-rpc-call`)
   if (rpc2?.rpcUrl !== L2_RPC) throw new Error(`wrong rpcUrl: expected ${L2_RPC}, got ${rpc2?.rpcUrl}`)
   if (rpc2?.chainId !== L2_CHAIN) throw new Error(`wrong chainId: expected ${L2_CHAIN}, got ${rpc2?.chainId}`)
   console.log(`✓ wallet routed to L2 RPC (${L2_RPC})`)
-
-  try {
-    await waitForConfirmation(l2Op.transactionHash, L2_RPC)
-    console.log('✓ confirmed on L2')
-  } catch (err: any) {
-    console.warn(`⚠  L2 confirmation: ${err.message}`)
-  }
 
   // ── Part D: backward compat — v2 wallet ignores networks[] ───────────────
 

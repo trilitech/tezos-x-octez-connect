@@ -101,7 +101,7 @@ import { WCStorage } from '@tezos-x/octez.connect-core'
 import { MemoryStorage } from './storage'
 
 const PORT = parseInt(process.env.PORT ?? '5173')
-const L1_RPC = 'https://octez-shadownet-archive.octez.io'
+const L1_RPC = 'https://rpc.shadownet.teztnets.com'
 const L2_RPC = 'https://demo.txpark.nomadic-labs.com/rpc/tezlink'
 
 // ── State ──────────────────────────────────────────────────────────────────

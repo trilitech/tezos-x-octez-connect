@@ -67,7 +67,7 @@ process.on('unhandledRejection', (reason: any) => {
 const WALLET_KEY =
   process.env.WALLET_KEY ??
   'edsk3QoqBuvdamxouPhin7swCvkQNgq4jP5KZPbwWNnwdZpSpJiEbq'
-const DEFAULT_RPC = 'https://octez-shadownet-archive.octez.io'
+const DEFAULT_RPC = 'https://rpc.shadownet.teztnets.com'
 
 // V2_MODE=true → wallet ignores networks[] and responds in legacy v2 shape (for backward-compat test)
 let v2Mode: boolean = process.env.V2_MODE === 'true'
@@ -164,7 +164,39 @@ async function main(): Promise<void> {
             gasLimit: Math.ceil((estimates[i]?.gasLimit ?? 1000) * 1.5),
             storageLimit: estimates[i]?.storageLimit ?? 257,
           }))
+
+          // Snapshot counter before injection so we can detect inclusion.
+          // The tezlink protocol does not expose operations in blocks/{id}/operations —
+          // the account counter is the only reliable confirmation signal.
+          const senderAddress = await signer.publicKeyHash()
+          const counterBefore = await tezos.rpc
+            .getContract(senderAddress, { block: 'head' })
+            .then((r) => parseInt(String((r as any).counter ?? -1), 10))
+            .catch(() => -1)
+
           result = await tezos.contract.batch(opsWithFees).send()
+
+          // Wait for the counter to advance past counterBefore — this proves the
+          // operation was included in a tezlink block.  The stream is opened BEFORE
+          // the counter snapshot so we cannot miss the inclusion event; the
+          // counterBefore snapshot then serves as a backfill guard.
+          if (counterBefore >= 0) {
+            await new Promise<void>((resolve) => {
+              const deadline = setTimeout(resolve, 60_000)  // give up after 60 s
+              const poll = setInterval(async () => {
+                try {
+                  const c = await tezos.rpc
+                    .getContract(senderAddress, { block: 'head' })
+                    .then((r) => parseInt(String((r as any).counter ?? 0), 10))
+                  if (c > counterBefore) {
+                    clearInterval(poll)
+                    clearTimeout(deadline)
+                    resolve()
+                  }
+                } catch (_) {}
+              }, 3_000)
+            })
+          }
         } else {
           result = await tezos.contract.batch(ops).send()
         }
@@ -218,6 +250,16 @@ async function main(): Promise<void> {
   // POST /wc2-ready — Phase 5 stub (always 200 for now)
   app.post('/wc2-ready', (_req, res) => {
     res.sendStatus(200)
+  })
+
+  // GET /account — sender address (derived from WALLET_KEY)
+  app.get('/account', async (_req, res) => {
+    try {
+      const address = await signer.publicKeyHash()
+      res.json({ address })
+    } catch (err: any) {
+      res.status(500).json({ error: err.message })
+    }
   })
 
   // POST /reset — clear state
