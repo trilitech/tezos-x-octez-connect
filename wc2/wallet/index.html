@@ -83,6 +83,14 @@
     .empty-state { color: #475569; font-size: .875rem; text-align: center; padding: 1rem 0; }
 
     #request-section { display: none; }
+
+    /* Pairing input */
+    .pair-form { display: flex; gap: .5rem; margin-top: .75rem; }
+    .pair-input { flex: 1; background: #0f172a; border: 1px solid #334155;
+                  border-radius: 8px; padding: .55rem .75rem; color: #e2e8f0;
+                  font-size: .78rem; font-family: monospace; outline: none; }
+    .pair-input:focus { border-color: #3b82f6; }
+    .pair-input::placeholder { color: #475569; }
   </style>
 </head>
 <body>
@@ -101,6 +109,10 @@
           <div class="account-name">POC Wallet</div>
           <div class="account-addr" id="account-addr">loading…</div>
         </div>
+      </div>
+      <div class="pair-form" style="margin-top:1rem;">
+        <input class="pair-input" id="pair-input" placeholder="Paste pairing URI from dApp…" />
+        <button class="btn btn-approve" id="btn-pair" style="flex:0 0 auto; padding:.55rem 1rem;">Pair</button>
       </div>
     </div>
 

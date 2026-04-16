@@ -2,6 +2,7 @@ import {
   WalletClient,
   BeaconMessageType,
   PermissionScope,
+  Serializer,
 } from '@tezos-x/octez.connect-wallet'
 import { TezosToolkit } from '@taquito/taquito'
 import { InMemorySigner } from '@taquito/signer'
@@ -11,10 +12,12 @@ const L1_RPC     = 'https://rpc.shadownet.teztnets.com'
 const L2_RPC     = 'https://demo.txpark.nomadic-labs.com/rpc/tezlink'
 
 // ── DOM refs ──────────────────────────────────────────────────────────────────
-const accountAddr   = document.getElementById('account-addr')!
-const statusBadge   = document.getElementById('status-badge')!
+const accountAddr    = document.getElementById('account-addr')!
+const statusBadge    = document.getElementById('status-badge')!
 const requestSection = document.getElementById('request-section')!
-const logList       = document.getElementById('log-list')!
+const logList        = document.getElementById('log-list')!
+const pairInput      = document.getElementById('pair-input') as HTMLInputElement
+const btnPair        = document.getElementById('btn-pair') as HTMLButtonElement
 
 // ── Logging ───────────────────────────────────────────────────────────────────
 function addLog(msg: string, cls: 'ok' | 'err' | '' = '') {
@@ -94,13 +97,17 @@ function showOperationRequest(
     <div class="op-detail">
       <div class="op-detail-row">
         <span class="op-detail-key">Kind</span>
-        <span class="op-detail-val">${op.kind}</span>
+        <span class="op-detail-val">${op.parameters ? 'contract call' : op.kind}</span>
       </div>
       ${op.destination ? `<div class="op-detail-row">
         <span class="op-detail-key">To</span>
         <span class="op-detail-val">${op.destination}</span>
       </div>` : ''}
-      ${op.amount != null ? `<div class="op-detail-row">
+      ${op.parameters?.entrypoint ? `<div class="op-detail-row">
+        <span class="op-detail-key">Entrypoint</span>
+        <span class="op-detail-val">${op.parameters.entrypoint}</span>
+      </div>` : ''}
+      ${op.amount && op.amount !== '0' ? `<div class="op-detail-row">
         <span class="op-detail-key">Amount</span>
         <span class="op-detail-val">${op.amount} mutez</span>
       </div>` : ''}
@@ -160,6 +167,21 @@ async function main() {
 
   statusBadge.textContent = 'Listening'
   addLog('Wallet ready — listening for connections', 'ok')
+
+  // ── Pairing via URI ────────────────────────────────────────────────────────
+  const serializer = new Serializer()
+  btnPair.addEventListener('click', async () => {
+    const raw = pairInput.value.trim()
+    if (!raw) return
+    try {
+      const peerInfo = await serializer.deserialize(raw) as any
+      await client.addPeer(peerInfo)
+      pairInput.value = ''
+      addLog(`Paired with ${peerInfo.name ?? 'dApp'}`, 'ok')
+    } catch (err: any) {
+      addLog(`Pairing failed: ${err.message}`, 'err')
+    }
+  })
 
   await client.connect(async (message) => {
     if (message.type === BeaconMessageType.PermissionRequest) {
@@ -232,8 +254,9 @@ async function main() {
 
       const ops: any[] = (message.operationDetails as any[]).map((op) => {
         if (op.kind === 'transaction') {
-          return { kind: 'transaction' as const, to: op.destination,
-                   amount: parseInt(op.amount, 10), mutez: true }
+          const base = { kind: 'transaction' as const, to: op.destination,
+                         amount: parseInt(op.amount ?? '0', 10), mutez: true }
+          return op.parameters ? { ...base, parameter: op.parameters } : base
         }
         return op
       })
@@ -255,9 +278,9 @@ async function main() {
               const estimates = await tezos.estimate.batch(ops)
               const opsWithFees = ops.map((op: any, i: number) => ({
                 ...op,
-                fee: Math.ceil((estimates[i]?.suggestedFeeMutez ?? 0) * 2),
-                gasLimit: Math.ceil((estimates[i]?.gasLimit ?? 1000) * 1.5),
-                storageLimit: estimates[i]?.storageLimit ?? 257,
+                fee: Math.ceil((estimates[i]?.suggestedFeeMutez ?? 0) * 3),
+                gasLimit: estimates[i]?.gasLimit,
+                storageLimit: estimates[i]?.storageLimit,
               }))
               result = await tezos.contract.batch(opsWithFees).send()
 
@@ -294,7 +317,9 @@ async function main() {
               id: message.id,
               errorType: 'UNKNOWN_ERROR',
             } as any)
-            addLog(`✗ ${err.message}`, 'err')
+            const detail = err?.message ?? String(err)
+            console.error('Operation failed:', err)
+            addLog(`✗ ${detail}`, 'err')
           }
         },
         async () => {
