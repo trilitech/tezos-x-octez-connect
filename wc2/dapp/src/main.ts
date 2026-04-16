@@ -3,6 +3,7 @@ import {
   NetworkType,
   BeaconEvent,
   Regions,
+  LocalStorage,
 } from '@tezos-x/octez.connect-dapp'
 
 const L1_CHAIN   = 'tezos:NetXsqzbfFenSTS'
@@ -53,6 +54,8 @@ function makeClient(): DAppClient {
     name: 'Tezos X dApp POC',
     disableDefaultEvents: true,
     network: { type: NetworkType.CUSTOM, rpcUrl: L1_RPC, name: 'Shadownet L1' },
+    // Prefix storage to avoid key collisions with the wallet on the same origin
+    storage: new LocalStorage('tezx-dapp'),
     matrixNodes: {
       [Regions.EUROPE_WEST]: [
         'beacon-node-1.octez.io',

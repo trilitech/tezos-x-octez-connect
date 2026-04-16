@@ -3,6 +3,7 @@ import {
   BeaconMessageType,
   PermissionScope,
   Serializer,
+  LocalStorage,
 } from '@tezos-x/octez.connect-wallet'
 import { TezosToolkit } from '@taquito/taquito'
 import { InMemorySigner } from '@taquito/signer'
@@ -162,6 +163,8 @@ async function main() {
 
   const client = new WalletClient({
     name: 'Tezos X Wallet POC',
+    // Prefix storage to avoid key collisions with the dApp on the same origin
+    storage: new LocalStorage('tezx-wallet'),
   })
   await client.init()
 
