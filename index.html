@@ -867,7 +867,7 @@ client.<span class="fn">onOperationRequest</span>(<span class="kw">async</span> 
           <span class="tag tag-ux">UX demo</span>
         </div>
       </div>
-      <span class="phase-status st-todo">Not started</span>
+      <span class="phase-status st-done">Done</span>
     </div>
     <div class="phase-body">
       <p style="font-size:.875rem; color:var(--text-dim); margin-top:1rem;">Replace the headless Express servers with real Vite browser apps. The wallet runs in one browser tab, the dApp in another (or a popup). The Beacon SDK runs client-side (same as production wallets like Kukai or Temple), so the demo is architecturally honest. First milestone is internal validation; screen recording polish comes later.</p>
@@ -903,24 +903,31 @@ client.<span class="fn">onOperationRequest</span>(<span class="kw">async</span> 
           </ul>
         </div>
         <div class="col-box">
-          <h4>Derisking questions</h4>
+          <h4>Derisking — resolved</h4>
           <ul>
-            <li class="q">Does <code>WalletClient</code> work in a Vite browser context without Node.js polyfills? (IndexedDB, BroadcastChannel — different from Node.js)</li>
-            <li class="q">Which contract on tezlink to call for the L2 operation? Need a deployed FA2 or simple entrypoint.</li>
-            <li class="q">PostMessage transport usable across two Vite dev-server tabs on the same origin?</li>
+            <li>✓ <code>WalletClient</code> works in Vite with <code>vite-plugin-node-polyfills</code> (Buffer global needed for <code>generateGUID</code>)</li>
+            <li>✓ L2 contract: <code>KT1PWPM4rXF8QhouXmF8EugxFvYcdfiz6L3z</code> — minimal <code>parameter string; storage string</code> originated on txpark tezlink</li>
+            <li>✓ Matrix P2P used across two tabs; pairing URI pasted manually in wallet input</li>
           </ul>
         </div>
       </div>
       <div class="outcome"><strong>Phase done when:</strong> A human can open two browser tabs, pair wallet with dApp, sign one L1 transfer and one Michelson L2 contract call, and see both confirmed — without touching the terminal.</div>
       <div class="e2e">
-        <h4>Validation — human review (internal first)</h4>
+        <h4>Validation — completed</h4>
         <ol>
-          <li>dApp shows QR / URI for pairing</li>
-          <li>Wallet approval screen lists both networks (L1 + Michelson interface) clearly</li>
-          <li>Per-operation signing screen shows correct network label and operation details</li>
-          <li>L1 transfer hash confirmed on shadownet; L2 contract call hash confirmed on tezlink</li>
-          <li>Full flow works without any terminal interaction</li>
+          <li>✓ dApp shows pairing URI; wallet has paste input → pair</li>
+          <li>✓ Wallet approval screen lists L1 (Shadownet) + Michelson interface with colored dots</li>
+          <li>✓ Per-operation signing screen shows network label, destination, entrypoint</li>
+          <li>✓ L1 transfer: hash confirmed via TzKT stream (stream-driven, shows block number)</li>
+          <li>✓ L2 contract call: "included" shown immediately (counter-based confirmation in wallet); TzKT link provided (indexer lagging ~6300 blocks behind RPC)</li>
+          <li>✓ Full flow without terminal interaction</li>
         </ol>
+        <h4>Known issues / notes</h4>
+        <ul>
+          <li>Taquito fee estimation ~2.1× too low on tezlink → workaround: fee × 3 (tracked in TZX-128; Taquito 24.3 expected to fix)</li>
+          <li>TzKT L2 indexer significantly lagging behind RPC — block number enrichment may be delayed minutes</li>
+          <li>Reconnect after disconnect works; <code>removeAllPeers()</code> must be called to clear Matrix session before re-pairing</li>
+        </ul>
       </div>
     </div>
   </div>

@@ -5,11 +5,14 @@ import {
   Regions,
 } from '@tezos-x/octez.connect-dapp'
 
-const L1_CHAIN = 'tezos:NetXsqzbfFenSTS'
-const L2_CHAIN = 'tezos:NetXH12Aer3be93'
-const L1_RPC   = 'https://rpc.shadownet.teztnets.com'
-const L2_RPC   = 'https://demo.txpark.nomadic-labs.com/rpc/tezlink'
-const DEST     = 'tz1VSUr8wwNhLAzempoch5d6hLRiTh8Cjcjb'
+const L1_CHAIN   = 'tezos:NetXsqzbfFenSTS'
+const L2_CHAIN   = 'tezos:NetXH12Aer3be93'
+const L1_RPC     = 'https://rpc.shadownet.teztnets.com'
+const L2_RPC     = 'https://demo.txpark.nomadic-labs.com/rpc/tezlink'
+const DEST       = 'tz1VSUr8wwNhLAzempoch5d6hLRiTh8Cjcjb'
+const L2_CONTRACT = 'KT1PWPM4rXF8QhouXmF8EugxFvYcdfiz6L3z'
+const L1_TZKT    = 'https://api.shadownet.tzkt.io'
+const L2_TZKT    = 'https://demo.txpark.nomadic-labs.com/tzkt'
 
 // ── DOM refs ──────────────────────────────────────────────────────────────────
 const connDot    = document.getElementById('conn-dot')!
@@ -119,6 +122,7 @@ btnConnect.addEventListener('click', async () => {
 // ── Disconnect ────────────────────────────────────────────────────────────────────
 btnDisconn.addEventListener('click', async () => {
   try { await client?.clearActiveAccount() } catch (_) {}
+  try { await (client as any)?.removeAllPeers() } catch (_) {}
   client = null
   v3Accounts = null
   setConnState('idle', 'Not connected')
@@ -133,9 +137,73 @@ btnDisconn.addEventListener('click', async () => {
   btnL2.disabled = true
 })
 
+// ── Inclusion watcher ──────────────────────────────────────────────────────────
+// knownIncluded=true  → wallet already confirmed inclusion (L2 counter-based);
+//                       show "included" immediately, enrich with block # if TzKT catches up.
+// knownIncluded=false → wait for TzKT to confirm (L1); use EventSource per new block.
+function watchIncluded(
+  hash: string,
+  rpcBase: string,
+  tzktBase: string,
+  statusEl: HTMLElement,
+  hashEl: HTMLElement,
+  knownIncluded: boolean,
+): void {
+  const tzktUrl = `${tzktBase}/v1/operations/${hash}`
+  const explorerLink = `<a href="${tzktBase}/${hash}" target="_blank" style="color:#7dd3fc">${hash}</a>`
+
+  if (knownIncluded) {
+    // Wallet confirmed via counter — show included now, enrich with block # later
+    setOpStatus(statusEl, 'done', '✓ included')
+    hashEl.innerHTML = explorerLink
+    // Background: poll TzKT until block number available (up to 5 min)
+    const deadline = Date.now() + 300_000
+    const timer = setInterval(async () => {
+      if (Date.now() > deadline) { clearInterval(timer); return }
+      try {
+        const ops = await fetch(tzktUrl).then(r => r.json()) as any[]
+        if (ops.length > 0) {
+          clearInterval(timer)
+          const level = ops[0]?.level
+          if (level) setOpStatus(statusEl, 'done', `✓ included · block ${level}`)
+        }
+      } catch (_) {}
+    }, 5_000)
+    return
+  }
+
+  // L1: stream-driven TzKT poller
+  const es = new EventSource(`${rpcBase}/monitor/heads/main`)
+  const deadline = setTimeout(() => {
+    es.close()
+    setOpStatus(statusEl, 'done', '✓ submitted (inclusion timeout)')
+  }, 120_000)
+
+  async function check() {
+    try {
+      const ops = await fetch(tzktUrl).then(r => r.json()) as any[]
+      if (ops.length > 0) {
+        clearTimeout(deadline)
+        es.close()
+        const level = ops[0]?.level
+        setOpStatus(statusEl, 'done', `✓ included${level ? ` · block ${level}` : ''}`)
+        hashEl.innerHTML = explorerLink
+      }
+    } catch (_) {}
+  }
+
+  es.onmessage = () => check()
+  es.onerror = () => {}
+  check()
+}
+
 // ── Send operation helper ───────────────────────────────────────────────────────
 async function sendOp(
   chainId: string,
+  rpcBase: string,
+  tzktBase: string,
+  knownIncluded: boolean,
+  operationDetails: any[],
   statusEl: HTMLElement,
   hashEl: HTMLElement,
   btn: HTMLButtonElement,
@@ -153,21 +221,30 @@ async function sendOp(
 
     let result: any
     try {
-      result = await (client as any).requestOperation({
-        operationDetails: [{ kind: 'transaction', amount: '1', destination: DEST }],
-      })
+      result = await (client as any).requestOperation({ operationDetails })
     } finally {
       ;(client as any).makeRequest = orig
     }
 
-    hashEl.textContent = result.transactionHash
+    const hash = result.transactionHash
+    hashEl.textContent = hash
     hashEl.style.display = 'block'
-    setOpStatus(statusEl, 'done', '✓ submitted')
+    setOpStatus(statusEl, 'pending', '✓ submitted — waiting for inclusion…')
+    watchIncluded(hash, rpcBase, tzktBase, statusEl, hashEl, knownIncluded)
   } catch (err: any) {
-    setOpStatus(statusEl, 'err', `✗ ${err.message}`)
+    const msg = err?.message ?? err?.errorType ?? err?.description ?? String(err)
+    setOpStatus(statusEl, 'err', `✗ ${msg}`)
     btn.disabled = false
   }
 }
 
-btnL1.addEventListener('click', () => sendOp(L1_CHAIN, l1Status, l1Hash, btnL1))
-btnL2.addEventListener('click', () => sendOp(L2_CHAIN, l2Status, l2Hash, btnL2))
+const L1_OPS = [{ kind: 'transaction', amount: '1', destination: DEST }]
+const L2_OPS = [{
+  kind: 'transaction',
+  amount: '0',
+  destination: L2_CONTRACT,
+  parameters: { entrypoint: 'default', value: { string: 'hello from Tezos X dApp' } },
+}]
+
+btnL1.addEventListener('click', () => sendOp(L1_CHAIN, L1_RPC, L1_TZKT, false, L1_OPS, l1Status, l1Hash, btnL1))
+btnL2.addEventListener('click', () => sendOp(L2_CHAIN, L2_RPC, L2_TZKT, true,  L2_OPS, l2Status, l2Hash, btnL2))

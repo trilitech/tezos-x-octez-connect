@@ -8,9 +8,9 @@
     "build": "vite build"
   },
   "dependencies": {
-    "@tezos-x/octez.connect-wallet": "4.8.3",
-    "@taquito/taquito": "^21.0.0",
-    "@taquito/signer": "^21.0.0"
+    "@taquito/signer": "^24.3.0-rc.3",
+    "@taquito/taquito": "^24.3.0-rc.3",
+    "@tezos-x/octez.connect-wallet": "4.8.3"
   },
   "devDependencies": {
     "vite": "^5.4.0",
