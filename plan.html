@@ -252,6 +252,83 @@
       .obj-grid, .two-col, .opt-grid { grid-template-columns: 1fr; }
       header h1 { font-size: 1.5rem; }
     }
+
+    /* ── Wallet integration tab ───────────────────────────────────────── */
+    .spec-intro { background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+                  padding: 1.5rem; margin-bottom: 2rem; }
+    .spec-intro h2 { font-size: 1rem; font-weight: 700; margin-bottom: .6rem; }
+    .spec-intro p  { font-size: .875rem; color: var(--text-dim); line-height: 1.7; margin-bottom: .4rem; }
+    .spec-intro p:last-child { margin: 0; }
+
+    .spec-section { margin-bottom: 2.5rem; }
+    .spec-h2 { font-size: 1rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
+               color: var(--text-dim); margin: 2.5rem 0 1rem;
+               padding-bottom: .5rem; border-bottom: 1px solid var(--border); }
+    .spec-h3 { font-size: .9rem; font-weight: 700; color: var(--text); margin: 1.5rem 0 .6rem; }
+    .spec-p  { font-size: .875rem; color: var(--text-dim); line-height: 1.7; margin-bottom: .6rem; }
+
+    .spec-note { background: #1A1330; border: 1px solid var(--purple-dim); border-radius: 8px;
+                 padding: .85rem 1.1rem; margin: 1rem 0; font-size: .82rem; color: var(--text-dim); }
+    .spec-note strong { color: var(--purple); }
+    .spec-warn { background: #1C1105; border: 1px solid #92400E; border-radius: 8px;
+                 padding: .85rem 1.1rem; margin: 1rem 0; font-size: .82rem; color: #FDE68A; }
+    .spec-warn strong { color: var(--amber); display: block; margin-bottom: .25rem; }
+    .spec-ok  { background: #052E16; border: 1px solid #065F46; border-radius: 8px;
+                padding: .85rem 1.1rem; margin: 1rem 0; font-size: .82rem; color: #6EE7B7; }
+    .spec-ok strong { color: var(--green); }
+
+    .msg-flow { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin: 1rem 0; }
+    .msg-flow-header { display: grid; grid-template-columns: 1fr 40px 1fr;
+                       background: var(--surface2); padding: .4rem 1rem;
+                       font-size: .72rem; font-weight: 700; text-transform: uppercase;
+                       letter-spacing: .06em; color: var(--text-dim); text-align: center; }
+    .msg-flow-row { display: grid; grid-template-columns: 1fr 40px 1fr;
+                    align-items: center; padding: .45rem 1rem;
+                    border-top: 1px solid var(--border); font-size: .8rem; }
+    .msg-flow-row:nth-child(odd) { background: var(--surface); }
+    .msg-flow-row:nth-child(even) { background: var(--surface2); }
+    .msg-lbl { font-family: "JetBrains Mono","Fira Code",Consolas,monospace;
+               color: var(--text-dim); font-size: .75rem; }
+    .msg-lbl.wallet { color: var(--teal); }
+    .msg-lbl.dapp   { color: var(--blue); }
+    .msg-arrow-cell { text-align: center; }
+    .msg-arrow { font-size: 1rem; }
+    .msg-arrow.to-dapp   { color: var(--teal); }
+    .msg-arrow.to-wallet { color: var(--blue); }
+    .msg-sub  { font-size: .72rem; color: var(--text-dim); margin-top: .1rem; }
+
+    .compat-table { width: 100%; border-collapse: collapse; font-size: .82rem; margin: .75rem 0; }
+    .compat-table th { text-align: left; padding: .4rem .75rem; color: var(--text-dim);
+                       border-bottom: 2px solid var(--border); font-size: .72rem;
+                       text-transform: uppercase; letter-spacing: .05em; }
+    .compat-table td { padding: .45rem .75rem; border-bottom: 1px solid var(--border);
+                       color: var(--text-dim); }
+    .compat-table tr:last-child td { border-bottom: none; }
+    .compat-table td.yes { color: var(--green); font-weight: 600; }
+    .compat-table td.no  { color: var(--text-dim); }
+    .compat-table td.result { color: var(--text); }
+
+    .field-table { width: 100%; border-collapse: collapse; font-size: .8rem; margin: .5rem 0 1rem; }
+    .field-table th { text-align: left; padding: .35rem .75rem; color: var(--text-dim);
+                      border-bottom: 1px solid var(--border); font-size: .72rem;
+                      text-transform: uppercase; letter-spacing: .05em; }
+    .field-table td { padding: .4rem .75rem; border-bottom: 1px solid var(--border);
+                      vertical-align: top; color: var(--text-dim); }
+    .field-table td:first-child { font-family: "JetBrains Mono","Fira Code",Consolas,monospace;
+                                  color: var(--text); font-size: .78rem; white-space: nowrap; }
+    .field-table tr:last-child td { border-bottom: none; }
+    .req  { display: inline-block; font-size: .65rem; padding: .1rem .4rem; border-radius: 4px;
+            font-weight: 700; text-transform: uppercase; }
+    .req-yes { background: #064E3B; color: var(--green); }
+    .req-rec { background: #451A03; color: var(--amber); }
+    .req-no  { background: var(--surface2); color: var(--text-dim); }
+
+    .wallet-type-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin: 1rem 0 1.5rem; }
+    .wallet-type { background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+                   padding: 1.25rem; }
+    .wallet-type h4 { font-size: .85rem; font-weight: 700; margin-bottom: .5rem; }
+    .wallet-type p  { font-size: .82rem; color: var(--text-dim); line-height: 1.6; }
+    @media (max-width: 640px) { .wallet-type-grid { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
@@ -269,6 +346,7 @@
   <div class="tab-nav-inner">
     <button class="tab-btn active" onclick="switchTab('overview', this)">Overview</button>
     <button class="tab-btn" onclick="switchTab('details', this)">Technical details</button>
+    <button class="tab-btn" onclick="switchTab('spec', this)">Wallet integration</button>
   </div>
 </nav>
 
@@ -1130,6 +1208,395 @@ client.<span class="fn">onOperationRequest</span>(<span class="kw">async</span> 
 
 </main>
 </div><!-- end tab-details -->
+
+<!-- ══════════════════════════════════════════════════════
+     TAB 3 — WALLET INTEGRATION SPEC
+     ══════════════════════════════════════════════════════ -->
+<div id="tab-spec" class="tab-content">
+<main>
+
+  <div class="spec-intro">
+    <h2>Wallet integration guide — Tezos X multi-chain sessions</h2>
+    <p>This page specifies the minimal changes required to support multi-chain sessions in a Beacon-compatible wallet. The dApp opens a session that spans two Tezos-family chains simultaneously (e.g. L1 + Michelson interface), and the wallet must be able to approve access to both chains and route operations to the correct RPC.</p>
+    <p>The changes are <strong>backward compatible</strong>: a dApp that sends <code>networks[]</code> falls back gracefully to single-chain with wallets that don't yet support it. Existing TZIP-10 sessions continue to work unchanged.</p>
+    <p><strong>Audience:</strong> wallet developers implementing Beacon/TZIP-10. Two archetypes are covered: Chrome extension wallets (§2) and standalone web/mobile app wallets (§3).</p>
+  </div>
+
+  <!-- ─────────────────────────────────────────────── -->
+  <div class="spec-h2">1 — Protocol changes</div>
+
+  <div class="spec-ok"><strong>Three small deltas to TZIP-10.</strong> All changes are additive. No existing field is removed or renamed.</div>
+
+  <!-- 1.1 -->
+  <div class="spec-h3">1.1 &nbsp;<code>permission_request</code> — new optional <code>networks[]</code> field</div>
+  <p class="spec-p">A dApp that wants a multi-chain session includes a <code>networks</code> array. If absent, the wallet behaves exactly as before.</p>
+
+  <pre><code><span class="cm">// permission_request (dApp → wallet)</span>
+{
+  <span class="prop">"type"</span>: <span class="str">"permission_request"</span>,
+  <span class="prop">"appMetadata"</span>: { <span class="prop">"name"</span>: <span class="str">"My dApp"</span> },
+  <span class="prop">"network"</span>: { <span class="prop">"type"</span>: <span class="str">"custom"</span>, <span class="prop">"rpcUrl"</span>: <span class="str">"…"</span> },
+  <span class="prop">"scopes"</span>: [<span class="str">"operation_request"</span>],
+
+  <span class="prop">"networks"</span>: [                         <span class="cm">// ← new field</span>
+    {
+      <span class="prop">"chainId"</span>: <span class="str">"tezos:NetXsqzbfFenSTS"</span>,   <span class="cm">// CAIP-2</span>
+      <span class="prop">"rpcUrl"</span>:  <span class="str">"https://rpc.shadownet.teztnets.com"</span>,
+      <span class="prop">"name"</span>:    <span class="str">"Tezos X L1"</span>
+    },
+    {
+      <span class="prop">"chainId"</span>: <span class="str">"tezos:NetXH12Aer3be93"</span>,
+      <span class="prop">"rpcUrl"</span>:  <span class="str">"https://…/rpc/tezlink"</span>,
+      <span class="prop">"name"</span>:    <span class="str">"Tezos X Michelson interface"</span>
+    }
+  ]
+}</code></pre>
+
+  <table class="field-table">
+    <tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr>
+    <tr><td>chainId</td><td>string</td><td><span class="req req-yes">yes</span></td><td>CAIP-2 identifier: <code>tezos:&lt;base58-chain-id&gt;</code></td></tr>
+    <tr><td>rpcUrl</td><td>string</td><td><span class="req req-rec">recommended</span></td><td>RPC endpoint for this chain. The wallet stores this and uses it to inject operations.</td></tr>
+    <tr><td>name</td><td>string</td><td><span class="req req-no">optional</span></td><td>Human-readable label for the approval UI.</td></tr>
+  </table>
+
+  <!-- 1.2 -->
+  <div class="spec-h3">1.2 &nbsp;<code>permission_response</code> — new optional <code>accounts</code> map</div>
+  <p class="spec-p">If the wallet supports multi-chain, it returns an <code>accounts</code> map alongside the existing <code>publicKey</code>. Keys are the CAIP-2 chain IDs from the request.</p>
+
+  <pre><code><span class="cm">// permission_response (wallet → dApp)</span>
+{
+  <span class="prop">"type"</span>: <span class="str">"permission_response"</span>,
+  <span class="prop">"id"</span>: <span class="str">"&lt;request-id&gt;"</span>,
+  <span class="prop">"publicKey"</span>: <span class="str">"edpk…"</span>,          <span class="cm">// kept for backward compat</span>
+  <span class="prop">"scopes"</span>: [<span class="str">"operation_request"</span>],
+
+  <span class="prop">"accounts"</span>: {                        <span class="cm">// ← new field</span>
+    <span class="prop">"tezos:NetXsqzbfFenSTS"</span>: { <span class="prop">"publicKey"</span>: <span class="str">"edpk…"</span> },
+    <span class="prop">"tezos:NetXH12Aer3be93"</span>: { <span class="prop">"publicKey"</span>: <span class="str">"edpk…"</span> }
+  }
+}</code></pre>
+
+  <div class="spec-note"><strong>Same key on all chains.</strong> For Tezos-family chains (L1, Michelson interface), the same Ed25519 key pair is valid everywhere — same address format <code>tz1…</code>. The wallet returns the same <code>publicKey</code> for each chain entry.</div>
+
+  <p class="spec-p">The dApp detects the version from the response shape:</p>
+  <pre><code><span class="kw">if</span> (response.accounts && <span class="kw">typeof</span> response.accounts === <span class="str">'object'</span>) {
+  <span class="cm">// v3 — multi-chain session; use accounts map for routing</span>
+} <span class="kw">else</span> {
+  <span class="cm">// v2 — single-chain session; use response.publicKey</span>
+}</code></pre>
+
+  <!-- 1.3 -->
+  <div class="spec-h3">1.3 &nbsp;<code>operation_request</code> — <code>network</code> field now accepts a CAIP-2 string</div>
+  <p class="spec-p">In a multi-chain session, the dApp sets <code>network</code> to a plain CAIP-2 string to identify the target chain. The wallet looks up the RPC it stored during the permission phase.</p>
+
+  <pre><code><span class="cm">// operation_request (dApp → wallet)</span>
+{
+  <span class="prop">"type"</span>: <span class="str">"operation_request"</span>,
+  <span class="prop">"id"</span>: <span class="str">"&lt;uuid&gt;"</span>,
+  <span class="prop">"operationDetails"</span>: [ … ],
+
+  <span class="prop">"network"</span>: <span class="str">"tezos:NetXH12Aer3be93"</span>   <span class="cm">// ← CAIP-2 string (was an object)</span>
+}</code></pre>
+
+  <p class="spec-p">Backward compat: if <code>network</code> is an <em>object</em> (TZIP-10 v2 format), fall back to reading <code>network.rpcUrl</code> / <code>network.type</code> as before.</p>
+
+  <!-- 1.4 -->
+  <div class="spec-h3">1.4 &nbsp;Backward compatibility matrix</div>
+  <table class="compat-table">
+    <tr><th>dApp sends <code>networks[]</code></th><th>Wallet returns <code>accounts</code></th><th>Result</th></tr>
+    <tr><td class="no">No</td><td class="no">No</td><td class="result">Standard TZIP-10 v2 — unchanged behaviour</td></tr>
+    <tr><td class="yes">Yes</td><td class="no">No</td><td class="result">Wallet doesn't support multi-chain; dApp falls back to single-chain</td></tr>
+    <tr><td class="yes">Yes</td><td class="yes">Yes</td><td class="result" style="color:var(--green);">✓ Multi-chain session — dApp uses <code>accounts</code> map for routing</td></tr>
+  </table>
+
+
+  <!-- ─────────────────────────────────────────────── -->
+  <div class="spec-h2">2 — Chrome extension wallet</div>
+
+  <div class="spec-ok"><strong>No transport changes.</strong> The existing PostMessage ↔ <code>chrome.runtime</code> channel continues to work. All changes are in message payload handling only.</div>
+
+  <div class="wallet-type-grid">
+    <div class="wallet-type">
+      <h4 style="color:var(--blue);">What already works</h4>
+      <p>Content script ↔ background message passing, popup window for user approval, signing with the stored key, injecting operations via the RPC. None of this changes.</p>
+    </div>
+    <div class="wallet-type">
+      <h4 style="color:var(--amber);">What needs to change</h4>
+      <p>Parse <code>networks[]</code> from <code>permission_request</code>. Show multi-chain approval UI. Return <code>accounts</code> map. Read CAIP-2 <code>network</code> string on <code>operation_request</code> and route to the correct RPC.</p>
+    </div>
+  </div>
+
+  <div class="spec-h3">2.1 &nbsp;Handle <code>networks[]</code> and return <code>accounts</code></div>
+  <pre><code><span class="cm">// In your permission_request handler (background or popup script)</span>
+<span class="kw">if</span> (message.type === <span class="str">'permission_request'</span>) {
+  <span class="kw">const</span> networks = message.networks ?? []
+
+  <span class="kw">if</span> (networks.length > <span class="str">0</span>) {
+    <span class="cm">// Multi-chain — show approval UI listing all requested chains</span>
+    <span class="kw">const</span> approved = <span class="kw">await</span> <span class="fn">showApprovalUI</span>(message.appMetadata.name, networks)
+    <span class="kw">if</span> (!approved) { <span class="fn">sendError</span>(message.id, <span class="str">'ABORTED_ERROR'</span>); <span class="kw">return</span> }
+
+    <span class="kw">const</span> networkRegistry = {}
+    <span class="kw">const</span> accounts = {}
+    <span class="kw">for</span> (<span class="kw">const</span> net <span class="kw">of</span> networks) {
+      accounts[net.chainId] = { publicKey: wallet.publicKey }
+      <span class="kw">if</span> (net.rpcUrl) networkRegistry[net.chainId] = net.rpcUrl
+    }
+    <span class="cm">// Persist for operation routing</span>
+    <span class="kw">await</span> chrome.storage.session.<span class="fn">set</span>({ networkRegistry })
+
+    <span class="fn">sendResponse</span>({
+      type: <span class="str">'permission_response'</span>, id: message.id,
+      publicKey: wallet.publicKey,
+      accounts,                         <span class="cm">// ← new</span>
+      scopes: message.scopes,
+    })
+  } <span class="kw">else</span> {
+    <span class="fn">sendLegacyPermissionResponse</span>(message)  <span class="cm">// unchanged v2 path</span>
+  }
+}</code></pre>
+
+  <div class="spec-h3">2.2 &nbsp;Approval UI — what to show</div>
+  <p class="spec-p">The user approves or rejects the <strong>entire session</strong> (not per-chain). Show all requested chains with their name and chain ID:</p>
+  <pre><code><span class="cm">My dApp  wants to connect to:
+
+  ● Tezos X L1           (tezos:NetXsqzbfFenSTS)
+  ● Michelson interface  (tezos:NetXH12Aer3be93)
+
+  Your address: tz1VSUr8…Cjcjb
+
+  [ Reject ]   [ Connect ]</span></code></pre>
+
+  <div class="spec-h3">2.3 &nbsp;Route operations by chain ID</div>
+  <pre><code><span class="cm">// In your operation_request handler</span>
+<span class="kw">if</span> (message.type === <span class="str">'operation_request'</span>) {
+  <span class="kw">const</span> networkField = message.network
+  <span class="kw">let</span> rpcUrl
+
+  <span class="kw">if</span> (<span class="kw">typeof</span> networkField === <span class="str">'string'</span>) {
+    <span class="cm">// New format: CAIP-2 string — look up stored RPC</span>
+    <span class="kw">const</span> { networkRegistry } = <span class="kw">await</span> chrome.storage.session.<span class="fn">get</span>(<span class="str">'networkRegistry'</span>)
+    rpcUrl = networkRegistry[networkField] ?? <span class="fn">fallbackRpc</span>(networkField)
+  } <span class="kw">else</span> {
+    <span class="cm">// Legacy format: { type, rpcUrl, name, … }</span>
+    rpcUrl = networkField?.rpcUrl ?? DEFAULT_L1_RPC
+  }
+
+  <span class="kw">const</span> hash = <span class="kw">await</span> <span class="fn">injectOperation</span>(rpcUrl, message.operationDetails, wallet.secretKey)
+  <span class="fn">sendResponse</span>({ type: <span class="str">'operation_response'</span>, id: message.id, transactionHash: hash })
+}</code></pre>
+
+  <div class="spec-h3">2.4 &nbsp;Fee estimation on the Michelson interface</div>
+  <div class="spec-warn">
+    <strong>⚠ Do not use SDK auto-fees on the Michelson interface.</strong>
+    The Michelson interface has a higher fee floor than mainnet (<code>minimal_fees: 4 mutez/byte</code> vs <code>1</code> on mainnet). Operations submitted with auto-computed fees will be rejected with <code>insufficient_fees</code>.
+  </div>
+  <p class="spec-p">You must explicitly estimate fees via the RPC for any operation on a chain where <code>chainId</code> ≠ L1 mainnet:</p>
+  <pre><code><span class="cm">// Using Taquito (recommended)</span>
+<span class="kw">const</span> tezos = <span class="kw">new</span> <span class="fn">TezosToolkit</span>(rpcUrl)
+tezos.<span class="fn">setSignerProvider</span>(signer)
+
+<span class="kw">const</span> estimates = <span class="kw">await</span> tezos.estimate.<span class="fn">batch</span>(operations)
+<span class="kw">const</span> opsWithFees = operations.<span class="fn">map</span>((op, i) => ({
+  ...op,
+  fee:          estimates[i].suggestedFeeMutez,
+  gasLimit:     estimates[i].gasLimit,
+  storageLimit: estimates[i].storageLimit,
+}))
+<span class="kw">const</span> result = <span class="kw">await</span> tezos.contract.<span class="fn">batch</span>(opsWithFees).<span class="fn">send</span>()</code></pre>
+  <p class="spec-p" style="margin-top:.25rem;">Detection: call <code>GET /chains/main/mempool/filter</code> on the RPC; if <code>minimal_fees > 100</code>, explicit estimation is required.</p>
+
+
+  <!-- ─────────────────────────────────────────────── -->
+  <div class="spec-h2">3 — Standalone app wallet</div>
+  <p class="spec-p">A standalone wallet (mobile or web app not delivered as a browser extension) cannot intercept <code>window.postMessage</code> from the dApp page. Two transport options are available:</p>
+
+  <div class="wallet-type-grid">
+    <div class="wallet-type">
+      <h4 style="color:var(--teal);">3.1 Matrix P2P (existing)</h4>
+      <p>Same transport (QR code pairing → Matrix room). Only the message payload changes — handle <code>networks[]</code> and return <code>accounts</code> exactly as in §2. No pairing handshake changes.</p>
+    </div>
+    <div class="wallet-type">
+      <h4 style="color:#FB923C;">3.2 Popup transport (new)</h4>
+      <p>The dApp opens the wallet as a browser popup via <code>window.open()</code>. Communication is via cross-origin <code>postMessage</code>. Useful when the wallet is a web app on its own domain.</p>
+    </div>
+  </div>
+
+  <!-- Popup transport -->
+  <div class="spec-h3">3.2 Popup transport — <code>tzip10-popup</code></div>
+  <p class="spec-p">The dApp calls <code>window.open('https://wallet.example.com/?popup=1', 'wallet', 'width=480,height=700')</code>. The wallet detects <code>?popup=1</code> in the URL <em>and</em> <code>window.opener !== null</code>, then enters popup mode.</p>
+
+  <p class="spec-p" style="font-size:.8rem; color:var(--text-dim); margin-bottom:.25rem;">Message sequence:</p>
+  <div class="msg-flow">
+    <div class="msg-flow-header">
+      <div>Wallet</div><div></div><div>dApp</div>
+    </div>
+    <div class="msg-flow-row">
+      <div class="msg-lbl wallet">wallet-ready</div>
+      <div class="msg-arrow-cell"><span class="msg-arrow to-dapp">→</span></div>
+      <div class="msg-sub">Wallet loaded, announces itself</div>
+    </div>
+    <div class="msg-flow-row">
+      <div class="msg-sub">Sends permission request</div>
+      <div class="msg-arrow-cell"><span class="msg-arrow to-wallet">←</span></div>
+      <div class="msg-lbl dapp">permission-request</div>
+    </div>
+    <div class="msg-flow-row">
+      <div class="msg-lbl wallet">permission-response</div>
+      <div class="msg-arrow-cell"><span class="msg-arrow to-dapp">→</span></div>
+      <div class="msg-sub">User approved; contains <code>accounts</code> map</div>
+    </div>
+    <div class="msg-flow-row">
+      <div class="msg-sub" style="color:#475569; font-style:italic;">— session active; popup stays open —</div>
+      <div></div><div></div>
+    </div>
+    <div class="msg-flow-row">
+      <div class="msg-sub">For each op to sign</div>
+      <div class="msg-arrow-cell"><span class="msg-arrow to-wallet">←</span></div>
+      <div class="msg-lbl dapp">operation-request</div>
+    </div>
+    <div class="msg-flow-row">
+      <div class="msg-lbl wallet">operation-response</div>
+      <div class="msg-arrow-cell"><span class="msg-arrow to-dapp">→</span></div>
+      <div class="msg-sub">Returns <code>transactionHash</code></div>
+    </div>
+  </div>
+
+  <div class="spec-h3">Message format reference</div>
+  <p class="spec-p" style="font-size:.8rem;">All messages: <code>{ type: "tzip10-popup", action: "…", … }</code></p>
+
+  <table class="field-table">
+    <tr><th>Direction</th><th>action</th><th>Key fields</th></tr>
+    <tr>
+      <td style="color:var(--teal);">wallet → dApp</td>
+      <td><code>wallet-ready</code></td>
+      <td><code>address</code> — wallet address (tz1…)</td>
+    </tr>
+    <tr>
+      <td style="color:var(--blue);">dApp → wallet</td>
+      <td><code>permission-request</code></td>
+      <td><code>id</code>, <code>appName</code>, <code>networks[]</code> (same format as §1.1)</td>
+    </tr>
+    <tr>
+      <td style="color:var(--teal);">wallet → dApp</td>
+      <td><code>permission-response</code></td>
+      <td><code>id</code>, <code>publicKey</code>, <code>accounts</code> map</td>
+    </tr>
+    <tr>
+      <td style="color:var(--teal);">wallet → dApp</td>
+      <td><code>permission-error</code></td>
+      <td><code>id</code>, <code>errorType</code> (e.g. <code>"ABORTED_ERROR"</code>)</td>
+    </tr>
+    <tr>
+      <td style="color:var(--blue);">dApp → wallet</td>
+      <td><code>operation-request</code></td>
+      <td><code>id</code>, <code>appName</code>, <code>chainId</code> (CAIP-2), <code>operations[]</code></td>
+    </tr>
+    <tr>
+      <td style="color:var(--teal);">wallet → dApp</td>
+      <td><code>operation-response</code></td>
+      <td><code>id</code>, <code>transactionHash</code></td>
+    </tr>
+    <tr>
+      <td style="color:var(--teal);">wallet → dApp</td>
+      <td><code>operation-error</code></td>
+      <td><code>id</code>, <code>error</code> (message string)</td>
+    </tr>
+  </table>
+
+  <div class="spec-h3">Wallet skeleton (TypeScript)</div>
+  <pre><code><span class="kw">async function</span> <span class="fn">initPopupMode</span>(signer: Signer): Promise&lt;<span class="kw">void</span>&gt; {
+  <span class="kw">const</span> params = <span class="kw">new</span> <span class="fn">URLSearchParams</span>(location.search)
+  <span class="kw">if</span> (!params.<span class="fn">has</span>(<span class="str">'popup'</span>) || !window.opener) <span class="kw">return</span>
+
+  <span class="kw">const</span> send = (msg: object) => window.opener.<span class="fn">postMessage</span>(msg, <span class="str">'*'</span>)
+  <span class="kw">let</span> networkRegistry: Record&lt;<span class="kw">string</span>, <span class="kw">string</span>&gt; = {}
+
+  <span class="cm">// 1. Announce ready</span>
+  <span class="fn">send</span>({ type: <span class="str">'tzip10-popup'</span>, action: <span class="str">'wallet-ready'</span>, address: <span class="kw">await</span> signer.<span class="fn">publicKeyHash</span>() })
+
+  <span class="cm">// 2. Handle incoming messages</span>
+  window.<span class="fn">addEventListener</span>(<span class="str">'message'</span>, <span class="kw">async</span> (event) => {
+    <span class="kw">const</span> msg = event.data
+    <span class="kw">if</span> (!msg || msg.type !== <span class="str">'tzip10-popup'</span>) <span class="kw">return</span>
+
+    <span class="kw">if</span> (msg.action === <span class="str">'permission-request'</span>) {
+      <span class="kw">const</span> approved = <span class="kw">await</span> <span class="fn">showApprovalUI</span>(msg.appName, msg.networks)
+      <span class="kw">if</span> (!approved) {
+        <span class="fn">send</span>({ type: <span class="str">'tzip10-popup'</span>, action: <span class="str">'permission-error'</span>, id: msg.id, errorType: <span class="str">'ABORTED_ERROR'</span> })
+        <span class="kw">return</span>
+      }
+      networkRegistry = {}
+      <span class="kw">const</span> publicKey = <span class="kw">await</span> signer.<span class="fn">publicKey</span>()
+      <span class="kw">const</span> accounts: Record&lt;<span class="kw">string</span>, { publicKey: <span class="kw">string</span> }&gt; = {}
+      <span class="kw">for</span> (<span class="kw">const</span> net <span class="kw">of</span> (msg.networks ?? [])) {
+        accounts[net.chainId] = { publicKey }
+        <span class="kw">if</span> (net.rpcUrl) networkRegistry[net.chainId] = net.rpcUrl
+      }
+      <span class="fn">send</span>({ type: <span class="str">'tzip10-popup'</span>, action: <span class="str">'permission-response'</span>, id: msg.id, publicKey, accounts })
+    }
+
+    <span class="kw">if</span> (msg.action === <span class="str">'operation-request'</span>) {
+      <span class="kw">const</span> rpcUrl = networkRegistry[msg.chainId] ?? <span class="fn">fallbackRpc</span>(msg.chainId)
+      <span class="kw">const</span> approved = <span class="kw">await</span> <span class="fn">showOperationUI</span>(msg.appName, msg.chainId, msg.operations)
+      <span class="kw">if</span> (!approved) {
+        <span class="fn">send</span>({ type: <span class="str">'tzip10-popup'</span>, action: <span class="str">'operation-error'</span>, id: msg.id, error: <span class="str">'ABORTED_ERROR'</span> })
+        <span class="kw">return</span>
+      }
+      <span class="kw">try</span> {
+        <span class="kw">const</span> hash = <span class="kw">await</span> <span class="fn">injectOperation</span>(signer, rpcUrl, msg.operations)
+        <span class="fn">send</span>({ type: <span class="str">'tzip10-popup'</span>, action: <span class="str">'operation-response'</span>, id: msg.id, transactionHash: hash })
+      } <span class="kw">catch</span> (err: <span class="kw">any</span>) {
+        <span class="fn">send</span>({ type: <span class="str">'tzip10-popup'</span>, action: <span class="str">'operation-error'</span>, id: msg.id, error: err.message })
+      }
+    }
+  })
+}</code></pre>
+
+  <div class="spec-h3">Security notes</div>
+  <div class="spec-note">
+    <strong>Validate event.origin.</strong> In the message listener, check <code>event.origin</code> against a list of trusted dApp origins to avoid processing rogue messages. At minimum, log origins you don't recognise.<br><br>
+    <strong>Popup blocker.</strong> <code>window.open()</code> must be called from a user gesture (button click). If the popup is blocked, the dApp should detect <code>popupWindow === null</code> and offer Matrix pairing as a fallback.<br><br>
+    <strong>Cross-origin postMessage.</strong> <code>window.opener.postMessage(msg, '*')</code> works cross-origin in all modern browsers. The wallet does not need read access to the opener's DOM.
+  </div>
+
+
+  <!-- ─────────────────────────────────────────────── -->
+  <div class="spec-h2">4 — Reference implementation</div>
+  <p class="spec-p">A working proof of concept is available in <strong><code>trilitech/tezos-x-beacon</code></strong>:</p>
+
+  <table class="field-table">
+    <tr><th>File</th><th>What it shows</th></tr>
+    <tr><td>wc2/wallet/src/main.ts</td><td>Browser wallet — all three transports: Matrix P2P, WC2, Popup</td></tr>
+    <tr><td>wc2/dapp/src/main.ts</td><td>dApp — <code>networks[]</code> injection, response version detection, <code>sendOpPopup()</code></td></tr>
+    <tr><td>test/phase5.ts</td><td>WalletConnect v2 — multi-chain session via Reown relay (<code>tezos_send</code>)</td></tr>
+    <tr><td>test/phase6.ts</td><td>Popup transport — Playwright E2E, headless wallet, two on-chain ops</td></tr>
+  </table>
+
+  <div class="spec-h3">Validated transports</div>
+  <table class="compat-table">
+    <tr><th>Transport</th><th>Status</th><th>Chains tested</th></tr>
+    <tr>
+      <td>Matrix P2P (TZIP-10 extension)</td>
+      <td class="yes">✓ validated</td>
+      <td style="color:var(--text-dim); font-size:.8rem;">L1 shadownet + Michelson interface</td>
+    </tr>
+    <tr>
+      <td>WalletConnect v2</td>
+      <td class="yes">✓ validated</td>
+      <td style="color:var(--text-dim); font-size:.8rem;">L1 shadownet + Michelson interface</td>
+    </tr>
+    <tr>
+      <td>Popup (<code>tzip10-popup</code>)</td>
+      <td class="yes">✓ validated</td>
+      <td style="color:var(--text-dim); font-size:.8rem;">L1 shadownet + Michelson interface</td>
+    </tr>
+  </table>
+
+  <div class="spec-note" style="margin-top:1.5rem;"><strong>Chain IDs used in tests.</strong> &nbsp;L1: <code>tezos:NetXsqzbfFenSTS</code> (shadownet) &nbsp;·&nbsp; Michelson interface: <code>tezos:NetXH12Aer3be93</code> (tezlink previewnet)</div>
+
+</main>
+</div><!-- end tab-spec -->
 
 <footer>
   Tezos X Octez.connect Multi-chain POC &middot; April 2026 &middot; Internal
