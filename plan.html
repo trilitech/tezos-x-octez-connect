@@ -924,7 +924,7 @@ client.<span class="fn">onOperationRequest</span>(<span class="kw">async</span> 
         </ol>
         <h4>Known issues / notes</h4>
         <ul>
-          <li>Taquito fee estimation ~2.1× too low on tezlink → workaround: fee × 3 (tracked in TZX-128; Taquito 24.3 expected to fix)</li>
+          <li>✓ Taquito fee estimation fixed in 24.3.0-rc.3 (<code>getMempoolFilter</code> fetches real tezlink fee params; ×3 workaround removed, TZX-128 closed)</li>
           <li>TzKT L2 indexer significantly lagging behind RPC — block number enrichment may be delayed minutes</li>
           <li>Reconnect after disconnect works; <code>removeAllPeers()</code> must be called to clear Matrix session before re-pairing</li>
         </ul>
