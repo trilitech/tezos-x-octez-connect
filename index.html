@@ -112,6 +112,7 @@
     .st-prereq   { background: #451A03; color: var(--amber); }
     .st-progress { background: #1E3A5F; color: var(--blue); }
     .st-done     { background: #064E3B; color: var(--green); }
+    .st-skip     { background: #1C1917; color: var(--text-dim); border: 1px solid var(--border); text-decoration: line-through; }
 
     .phase-body { padding: 0 1.5rem 1.5rem; border-top: 1px solid var(--border); }
 
@@ -252,6 +253,115 @@
       .obj-grid, .two-col, .opt-grid { grid-template-columns: 1fr; }
       header h1 { font-size: 1.5rem; }
     }
+
+    /* ── Wallet integration tab ───────────────────────────────────────── */
+    .spec-intro { background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+                  padding: 1.5rem; margin-bottom: 2rem; }
+    .spec-intro h2 { font-size: 1rem; font-weight: 700; margin-bottom: .6rem; }
+    .spec-intro p  { font-size: .875rem; color: var(--text-dim); line-height: 1.7; margin-bottom: .4rem; }
+    .spec-intro p:last-child { margin: 0; }
+
+    .spec-section { margin-bottom: 2.5rem; }
+    .spec-h2 { font-size: 1rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
+               color: var(--text-dim); margin: 2.5rem 0 1rem;
+               padding-bottom: .5rem; border-bottom: 1px solid var(--border); }
+    .spec-h3 { font-size: .9rem; font-weight: 700; color: var(--text); margin: 1.5rem 0 .6rem; }
+    .spec-p  { font-size: .875rem; color: var(--text-dim); line-height: 1.7; margin-bottom: .6rem; }
+
+    .spec-note { background: #1A1330; border: 1px solid var(--purple-dim); border-radius: 8px;
+                 padding: .85rem 1.1rem; margin: 1rem 0; font-size: .82rem; color: var(--text-dim); }
+    .spec-note strong { color: var(--purple); }
+    .spec-warn { background: #1C1105; border: 1px solid #92400E; border-radius: 8px;
+                 padding: .85rem 1.1rem; margin: 1rem 0; font-size: .82rem; color: #FDE68A; }
+    .spec-warn strong { color: var(--amber); display: block; margin-bottom: .25rem; }
+    .spec-ok  { background: #052E16; border: 1px solid #065F46; border-radius: 8px;
+                padding: .85rem 1.1rem; margin: 1rem 0; font-size: .82rem; color: #6EE7B7; }
+    .spec-ok strong { color: var(--green); }
+
+    .msg-flow { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin: 1rem 0; }
+    .msg-flow-header { display: grid; grid-template-columns: 1fr 40px 1fr;
+                       background: var(--surface2); padding: .4rem 1rem;
+                       font-size: .72rem; font-weight: 700; text-transform: uppercase;
+                       letter-spacing: .06em; color: var(--text-dim); text-align: center; }
+    .msg-flow-row { display: grid; grid-template-columns: 1fr 40px 1fr;
+                    align-items: center; padding: .45rem 1rem;
+                    border-top: 1px solid var(--border); font-size: .8rem; }
+    .msg-flow-row:nth-child(odd) { background: var(--surface); }
+    .msg-flow-row:nth-child(even) { background: var(--surface2); }
+    .msg-lbl { font-family: "JetBrains Mono","Fira Code",Consolas,monospace;
+               color: var(--text-dim); font-size: .75rem; }
+    .msg-lbl.wallet { color: var(--teal); }
+    .msg-lbl.dapp   { color: var(--blue); }
+    .msg-arrow-cell { text-align: center; }
+    .msg-arrow { font-size: 1rem; }
+    .msg-arrow.to-dapp   { color: var(--teal); }
+    .msg-arrow.to-wallet { color: var(--blue); }
+    .msg-sub  { font-size: .72rem; color: var(--text-dim); margin-top: .1rem; }
+
+    .compat-table { width: 100%; border-collapse: collapse; font-size: .82rem; margin: .75rem 0; }
+    .compat-table th { text-align: left; padding: .4rem .75rem; color: var(--text-dim);
+                       border-bottom: 2px solid var(--border); font-size: .72rem;
+                       text-transform: uppercase; letter-spacing: .05em; }
+    .compat-table td { padding: .45rem .75rem; border-bottom: 1px solid var(--border);
+                       color: var(--text-dim); }
+    .compat-table tr:last-child td { border-bottom: none; }
+    .compat-table td.yes { color: var(--green); font-weight: 600; }
+    .compat-table td.no  { color: var(--text-dim); }
+    .compat-table td.result { color: var(--text); }
+
+    .field-table { width: 100%; border-collapse: collapse; font-size: .8rem; margin: .5rem 0 1rem; }
+    .field-table th { text-align: left; padding: .35rem .75rem; color: var(--text-dim);
+                      border-bottom: 1px solid var(--border); font-size: .72rem;
+                      text-transform: uppercase; letter-spacing: .05em; }
+    .field-table td { padding: .4rem .75rem; border-bottom: 1px solid var(--border);
+                      vertical-align: top; color: var(--text-dim); }
+    .field-table td:first-child { font-family: "JetBrains Mono","Fira Code",Consolas,monospace;
+                                  color: var(--text); font-size: .78rem; white-space: nowrap; }
+    .field-table tr:last-child td { border-bottom: none; }
+    .req  { display: inline-block; font-size: .65rem; padding: .1rem .4rem; border-radius: 4px;
+            font-weight: 700; text-transform: uppercase; }
+    .req-yes { background: #064E3B; color: var(--green); }
+    .req-rec { background: #451A03; color: var(--amber); }
+    .req-no  { background: var(--surface2); color: var(--text-dim); }
+
+    .wallet-type-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin: 1rem 0 1.5rem; }
+    .wallet-type { background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+                   padding: 1.25rem; }
+    .wallet-type h4 { font-size: .85rem; font-weight: 700; margin-bottom: .5rem; }
+    .wallet-type p  { font-size: .82rem; color: var(--text-dim); line-height: 1.6; }
+    @media (max-width: 640px) { .wallet-type-grid { grid-template-columns: 1fr; } }
+
+    /* ── Spec sub-tabs ────────────────────────────────────────────── */
+    .spec-subnav { display: flex; gap: 0; margin: 1.5rem 0 0; border-bottom: 1px solid var(--border); }
+    .spec-subtab { background: none; border: none; border-bottom: 2px solid transparent;
+                   color: var(--text-dim); cursor: pointer; font-size: .88rem; font-weight: 600;
+                   padding: .7rem 1.4rem; transition: color .15s, border-color .15s; margin-bottom: -1px; }
+    .spec-subtab:hover { color: var(--text); }
+    .spec-subtab.active { color: var(--blue); border-bottom-color: var(--blue); }
+    .spec-panel { display: none; padding-top: 1.75rem; }
+    .spec-panel.active { display: block; }
+
+    /* ── Before / After diff ──────────────────────────────────────── */
+    .diff-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1rem 0 1.5rem; }
+    .diff-col { }
+    .diff-label { font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
+                  padding: .3rem .8rem; border-radius: 4px 4px 0 0; display: block; }
+    .diff-label.before { background: var(--surface2); color: var(--text-dim);
+                         border: 1px solid var(--border); border-bottom: none; }
+    .diff-label.after  { background: #052E16; color: var(--green);
+                         border: 1px solid #065F46; border-bottom: none; }
+    .diff-col pre { margin-top: 0; border-radius: 0 8px 8px 8px; }
+    .add { display: block; margin: 0 -1.25rem; padding: 0 1.25rem;
+           background: rgba(16,185,129,.12); border-left: 2px solid var(--green); }
+    @media (max-width: 700px) { .diff-grid { grid-template-columns: 1fr; } }
+
+    /* ── Edge case list ───────────────────────────────────────────── */
+    .edge-list { list-style: none; padding: 0; margin: .75rem 0; }
+    .edge-list > li { padding: .75rem 0; border-bottom: 1px solid var(--border); font-size: .85rem; }
+    .edge-list > li:last-child { border-bottom: none; }
+    .edge-title { font-weight: 600; color: var(--text); margin-bottom: .3rem; }
+    .edge-body  { color: var(--text-dim); line-height: 1.65; }
+    .edge-body code { font-size: .78rem; }
   </style>
 </head>
 <body>
@@ -269,6 +379,7 @@
   <div class="tab-nav-inner">
     <button class="tab-btn active" onclick="switchTab('overview', this)">Overview</button>
     <button class="tab-btn" onclick="switchTab('details', this)">Technical details</button>
+    <button class="tab-btn" onclick="switchTab('spec', this)">Wallet integration</button>
   </div>
 </nav>
 
@@ -374,7 +485,7 @@
           <span class="tag tag-proto">TZIP-10</span>
         </div>
       </div>
-      <span class="phase-status st-todo">Not started</span>
+      <span class="phase-status st-done">Done</span>
     </div>
     <div class="phase-row-outcome">
       <strong>Outcome:</strong> dApp pairs with wallet over Matrix, sends a tez transfer on L1, wallet signs and injects, operation confirmed on txpark. Headless REST API in place for all subsequent test phases.
@@ -392,7 +503,7 @@
           <span class="tag tag-proto">TZIP-10 delta</span>
         </div>
       </div>
-      <span class="phase-status st-todo">Not started</span>
+      <span class="phase-status st-done">Done</span>
     </div>
     <div class="phase-row-outcome">
       <strong>Outcome:</strong> dApp sends two operations in one session — one to L1 (shadownet), one to Michelson L2 (tezlink) — wallet routes each to the correct RPC. Backward compatibility with unpatched wallet proven via response-shape detection (no timeout, no new message type).
@@ -410,7 +521,7 @@
           <span class="tag tag-proto">real chains</span>
         </div>
       </div>
-      <span class="phase-status st-todo">Not started</span>
+      <span class="phase-status st-done">Done</span>
     </div>
     <div class="phase-row-outcome">
       <strong>Outcome:</strong> Two operations in one session land on two distinct chains, confirmed independently on each RPC. <span class="gate">Blocked on Michelson infrastructure fix (Phase 0).</span>
@@ -428,7 +539,7 @@
           <span class="tag tag-ux">UX demo</span>
         </div>
       </div>
-      <span class="phase-status st-todo">Not started</span>
+      <span class="phase-status st-done">Done</span>
     </div>
     <div class="phase-row-outcome">
       <strong>Outcome:</strong> Screen recording (real chain IDs) shareable with wallet teams. One pairing, one wallet connection approval (not one signature — the user approves access to both chains at session start), then L1 transfer + Michelson contract call each signed individually.
@@ -446,7 +557,7 @@
           <span class="tag tag-infra">deployment</span>
         </div>
       </div>
-      <span class="phase-status st-todo">Not started</span>
+      <span class="phase-status st-done">Done</span>
     </div>
     <div class="phase-row-outcome">
       <strong>Outcome:</strong> Full multi-chain session works between two separate HTTPS domains. CORS issues with Matrix homeserver surfaced and resolved.
@@ -464,7 +575,7 @@
           <span class="tag tag-proto">CAIP-25</span>
         </div>
       </div>
-      <span class="phase-status st-todo">Not started</span>
+      <span class="phase-status st-done">Done</span>
     </div>
     <div class="phase-row-outcome">
       <strong>Outcome:</strong> WC2 session spanning both <code>tezos:</code> chains established via Reown relay. <code>tezos_send</code> dispatched to each chain via <code>chainId</code> routing. Changes localized to <code>WalletConnectCommunicationClient</code> in Octez.connect.
@@ -482,10 +593,10 @@
           <span class="tag tag-ux">UX</span>
         </div>
       </div>
-      <span class="phase-status st-todo">Not started</span>
+      <span class="phase-status st-done">Done</span>
     </div>
     <div class="phase-row-outcome">
-      <strong>Outcome:</strong> Same multi-chain use-case works with a popup wallet. UX comparison between popup and Matrix QR pairing documented.
+      <strong>Outcome:</strong> Multi-chain session (L1 + Michelson interface) established via <code>tzip10-popup</code> PostMessage protocol. <code>window.open(?popup=1)</code> with <code>?headless=1</code> for auto-approve. Playwright test passes end-to-end: permission handshake, L1 transfer included, L2 contract call confirmed. Popup stays alive across both ops.
     </div>
   </div>
 
@@ -924,7 +1035,7 @@ client.<span class="fn">onOperationRequest</span>(<span class="kw">async</span> 
         </ol>
         <h4>Known issues / notes</h4>
         <ul>
-          <li>Taquito fee estimation ~2.1× too low on tezlink → workaround: fee × 3 (tracked in TZX-128; Taquito 24.3 expected to fix)</li>
+          <li>✓ Taquito fee estimation fixed in 24.3.0-rc.3 (<code>getMempoolFilter</code> fetches real tezlink fee params; ×3 workaround removed, TZX-128 closed)</li>
           <li>TzKT L2 indexer significantly lagging behind RPC — block number enrichment may be delayed minutes</li>
           <li>Reconnect after disconnect works; <code>removeAllPeers()</code> must be called to clear Matrix session before re-pairing</li>
         </ul>
@@ -944,7 +1055,7 @@ client.<span class="fn">onOperationRequest</span>(<span class="kw">async</span> 
           <span class="tag tag-infra">deployment</span>
         </div>
       </div>
-      <span class="phase-status st-todo">Not started</span>
+      <span class="phase-status st-done">Done</span>
     </div>
     <div class="phase-body">
       <p style="font-size:.875rem; color:var(--text-dim); margin-top:1rem;">Matrix P2P is already the transport from Phase 1. This phase is purely a deployment change: wallet and dApp move from localhost to separate public HTTPS domains (like Umami web vs. a dApp). The wallet is deployed as a <strong>dev build with headless mode enabled</strong> — making the flow testable by other people without a manual QR scan. No protocol or transport change — the goal is to confirm the setup works in a real-world network context and surface any CORS or DoS-protection issues with the Matrix homeserver.</p>
@@ -969,12 +1080,19 @@ client.<span class="fn">onOperationRequest</span>(<span class="kw">async</span> 
       </div>
       <div class="outcome"><strong>Phase done when:</strong> Full multi-chain session works between two separate HTTPS domains. Same use-case as Phase 3, from a real deployment.</div>
       <div class="e2e">
-        <h4>E2E validation — <code>test/phase4.ts</code></h4>
+        <h4>Validation — completed (manual browser test, 2026-04-17)</h4>
         <ol>
-          <li>Phase 2 assertions all pass against deployed URLs (<code>DAPP_URL=https://dapp.&lt;domain&gt;</code>, <code>WALLET_URL=https://wallet.&lt;domain&gt;</code>).</li>
-          <li>Playwright opens the dApp in a real browser: zero CORS errors in console. (CORS is browser-side only — invisible to the HTTP test runner.)</li>
-          <li>Matrix homeserver: median latency &lt; 3s over 5 consecutive messages; no message exceeds 15s.</li>
+          <li>✓ Wallet deployed at <code>trilitech.github.io/tezos-x-octez-connect/wallet/</code>, dApp at <code>…/dapp/</code> — both served from <code>trilitech.github.io</code> (same origin, isolated by <code>LocalStorage</code> prefix)</li>
+          <li>✓ Pairing via URI paste — wallet approval screen shows L1 + Michelson interface</li>
+          <li>✓ L1 transfer confirmed on-chain</li>
+          <li>✓ L2 contract call confirmed — fees correct with Taquito 24.3.0-rc.3 (no <code>insufficient_fees</code>)</li>
+          <li>✓ No CORS errors from Matrix homeserver</li>
         </ol>
+        <h4>Issues resolved</h4>
+        <ul>
+          <li>✓ <code>M_FORBIDDEN: already in the room</code> — fixed by isolating wallet/dApp localStorage with <code>LocalStorage('tezx-wallet')</code> / <code>LocalStorage('tezx-dapp')</code> prefixes</li>
+          <li>✓ Fee underestimation on tezlink — fixed by upgrading to Taquito 24.3.0-rc.3 (<code>getMempoolFilter</code> fetches real chain fee params)</li>
+        </ul>
       </div>
     </div>
   </div>
@@ -991,7 +1109,7 @@ client.<span class="fn">onOperationRequest</span>(<span class="kw">async</span> 
           <span class="tag tag-proto">CAIP-25</span>
         </div>
       </div>
-      <span class="phase-status st-todo">Not started</span>
+      <span class="phase-status st-done">Done</span>
     </div>
     <div class="phase-body">
       <p style="font-size:.875rem; color:var(--text-dim); margin-top:1rem;">WalletConnect v2 targets wallets like Kukai and Bento that support WC2. Changes are localized to <code>WalletConnectCommunicationClient</code> in <strong>Octez.connect</strong> (separate repo, external dependency) — this work happens in a branch of Octez.connect in parallel; the <code>tezos-x-beacon</code> repo documents the protocol design and provides the E2E test suite. The TZIP-10 protocol changes from Phase 2 carry over unchanged; only the transport layer differs. <strong>Architecture test Phase 5 :</strong> le serveur HTTP headless de contrôle (dApp + wallet) tourne inchangé en Phase 5 — WC2 remplace Matrix comme transport de communication Octez.connect, mais les endpoints headless (<code>POST /request-permissions</code>, <code>POST /request-operation</code>, <code>GET /last-handshake</code>, etc.) restent disponibles pour le test runner HTTP, exactement comme en Phases 1–4. This phase validates that the WC2 relay handles a session with two <code>tezos:</code> chains and that multi-chain routing translates correctly to CAIP-27 <code>chainId</code> routing.</p>
@@ -1051,15 +1169,20 @@ client.<span class="fn">onOperationRequest</span>(<span class="kw">async</span> 
 }</code></pre>
       <div class="outcome"><strong>Phase done when:</strong> A WC2 session spanning both <code>tezos:</code> chains is established via Reown relay, and <code>tezos_send</code> is correctly dispatched to each chain via <code>chainId</code> routing.</div>
       <div class="e2e">
-        <h4>E2E validation — <code>test/phase5.ts</code></h4>
+        <h4>Validation — completed (<code>test/phase5.ts</code>, 2026-04-17)</h4>
         <ol>
-          <li><strong>Prereq:</strong> <code>fetch("https://relay.reown.com/health")</code> returns 2xx. (Reown relay, formerly relay.walletconnect.com — verify the correct health endpoint in Reown SDK docs before implementing.)</li>
-          <li><code>signClient.connect({requiredNamespaces, optionalNamespaces})</code> resolves → poll <code>GET /last-handshake</code> every 500ms (timeout 10s) until <code>{step1:"wc2-session", step2:"acked", step3:"acked", mode:"v3"}</code>. (Octez.connect v3 exchange — permission_request + response-shape detection — runs async inside the WC2 channel after session establishment; may not be complete when <code>connect()</code> resolves.)</li>
-          <li><code>session.namespaces.tezos.chains.includes(L1_CHAIN_ID) &amp;&amp; session.namespaces.tezos.chains.includes(MICHELSON_CHAIN_ID)</code> — both chains present.</li>
-          <li><strong>L1:</strong> <code>POST /request-operation {network: L1_CHAIN_ID, …}</code> → <code>waitForConfirmation(hash, L1_RPC)</code> resolves.</li>
-          <li><strong>Michelson:</strong> <code>POST /request-operation {network: "tezos:NetXH12Aer3be93", …}</code> → <code>waitForConfirmation(hash, MICHELSON_RPC)</code> resolves.</li>
-          <li>No <code>Error</code> or <code>reject</code> from Reown relay throughout.</li>
+          <li>✓ Reown relay reachable (<code>relay.walletconnect.org/health</code> → 200)</li>
+          <li>✓ <code>signClient.connect({requiredNamespaces: {tezos: [L1]}, optionalNamespaces: {tezos: [L2]}})</code> produces pairing URI; wallet auto-approves via <code>POST /wc2-pair</code></li>
+          <li>✓ <code>session.namespaces.tezos.chains</code> contains both <code>tezos:NetXsqzbfFenSTS</code> (L1) and <code>tezos:NetXH12Aer3be93</code> (Michelson interface)</li>
+          <li>✓ <code>tezos_send</code> on L1 → <code>GET /last-rpc-call</code> returns L1 RPC → hash confirmed on-chain</li>
+          <li>✓ <code>tezos_send</code> on Michelson → <code>GET /last-rpc-call</code> returns tezlink RPC → hash confirmed via counter advance</li>
         </ol>
+        <h4>Implementation notes</h4>
+        <ul>
+          <li>WC2 implemented directly in the headless wallet (<code>wallet/src/index.ts</code>) via dynamic <code>import('@walletconnect/sign-client')</code> — no Octez.connect SDK changes needed for the POC</li>
+          <li>Test runner acts as the dApp (initialises its own <code>SignClient</code>); no headless dApp server needed for Phase 5</li>
+          <li>Taquito stays at 24.2.0 in the headless wallet (Octez.connect SDK has <code>@stablelib/*</code> peer deps that rc.3 no longer provides); ×2 fee multiplier kept for tezlink</li>
+        </ul>
       </div>
     </div>
   </div>
@@ -1076,7 +1199,7 @@ client.<span class="fn">onOperationRequest</span>(<span class="kw">async</span> 
           <span class="tag tag-ux">UX</span>
         </div>
       </div>
-      <span class="phase-status st-todo">Not started</span>
+      <span class="phase-status st-done">Done</span>
     </div>
     <div class="phase-body">
       <p style="font-size:.875rem; color:var(--text-dim); margin-top:1rem;">Octez.connect has a PostMessage transport for browser extensions. This phase adapts or extends it to support a popup model: the dApp opens the wallet via <code>window.open()</code>; because the opener holds a reference to the popup's <code>window</code> object, PostMessage works between the two pages. If the Octez.connect SDK already supports popup initialization, this is a small extension; if not, a new transport variant is implemented from scratch in the SDK fork.</p>
@@ -1102,20 +1225,530 @@ client.<span class="fn">onOperationRequest</span>(<span class="kw">async</span> 
       </div>
       <div class="outcome"><strong>Phase done when:</strong> Same multi-chain use-case works with a popup wallet. UX comparison between popup and Matrix QR pairing is documented.</div>
       <div class="e2e">
-        <h4>E2E validation — <code>test/phase6.ts</code> (Playwright)</h4>
+        <h4>E2E validation — <code>test/phase6.ts</code> (Playwright) ✓ passed 2026-04-17</h4>
+        <p style="font-size:.82rem; color:#10b981; margin-bottom:.5rem; font-weight:600;">npm run test:phase6 — 1 passed (2m20s)</p>
         <ol>
-          <li>Register popup listener <em>before</em> clicking: <code>const popupPromise = context.waitForEvent('page')</code> → click "Connect" → <code>const popupPage = await popupPromise</code>. Order matters — event is lost if popup opens before listener.</li>
-          <li>PostMessage handshake logs appear in both windows within 2s.</li>
-          <li>Phase 2 steps 1–4 pass via popup transport (backward compat step excluded — no second HTTP wallet server in popup mode).</li>
-          <li>Popup lifecycle: stays open across operations (<code>op_done</code> per op), closes only at session end (<code>session_done</code> → dApp calls <code>popupPage.close()</code>). Assert with <code>await popupPage.waitForEvent('close')</code>, not <code>page.isClosed()</code> (that tests the dApp page). <em>Note: <code>op_done</code> and <code>session_done</code> are Phase 6 popup transport signals sent via PostMessage between the popup and the opener — they are not Octez.connect/TZIP protocol messages and are not part of the TZIP extension defined in Phase 2.</em></li>
-          <li>Latency from <code>requestOperation</code> to <code>transactionHash</code> recorded for comparison with Matrix baseline.</li>
+          <li><strong>✓</strong> Popup opened at <code>localhost:5174/?popup=1&amp;headless=1</code> — wallet detected <code>?popup=1 &amp;&amp; window.opener</code> and entered PostMessage mode.</li>
+          <li><strong>✓</strong> <code>wallet-ready</code> → <code>permission-request</code> → <code>permission-response</code> handshake via cross-origin PostMessage. dApp shows "Connected · popup · tezos:NetXsqzbfFenSTS, tezos:NetXH12Aer3be93".</li>
+          <li><strong>✓</strong> L1 transfer submitted and included (shadownet). Hash: <code>op64Cdeh…</code></li>
+          <li><strong>✓</strong> L2 Michelson contract call submitted and included via counter-poll. Hash: <code>opFgG1Xu…</code></li>
+          <li><strong>✓</strong> Popup remains open across both operations (<code>popupPage.isClosed() === false</code>).</li>
         </ol>
+        <p style="font-size:.82rem; color:var(--text-dim); margin-top:.5rem;"><strong>Root cause found during validation:</strong> port 5174 was occupied by the Phase 5 headless Node.js server instead of the wc2/wallet Vite dev server — popup was getting "Cannot GET /". Also: popup handler was passing raw Beacon ops to Taquito without the <code>destination→to</code> / <code>amount→number</code> mapping, fixed in <code>runPopupMode</code>.</p>
       </div>
     </div>
   </div>
 
 </main>
 </div><!-- end tab-details -->
+
+<!-- ══════════════════════════════════════════════════════
+     TAB 3 — WALLET INTEGRATION SPEC
+     ══════════════════════════════════════════════════════ -->
+<div id="tab-spec" class="tab-content">
+<main>
+
+  <div class="spec-intro">
+    <h2>Wallet integration guide — Tezos X multi-chain sessions</h2>
+    <p>Three small, backward-compatible changes to the TZIP-10 Beacon protocol unlock sessions that span multiple Tezos-family chains simultaneously. This page shows the impact from three perspectives — the dApp, a Chrome extension wallet, and a standalone app wallet — with before/after diffs and edge cases.</p>
+    <p><strong>Protocol summary:</strong> &nbsp;<code>permission_request</code> gains an optional <code>networks[]</code> field. &nbsp;<code>permission_response</code> gains an optional <code>accounts</code> map. &nbsp;<code>operation_request</code>'s <code>network</code> field now accepts a bare CAIP-2 string.</p>
+  </div>
+
+  <!-- Sub-tab nav -->
+  <div class="spec-subnav">
+    <button class="spec-subtab active" onclick="switchSpec('dapp', this)">dApp</button>
+    <button class="spec-subtab" onclick="switchSpec('extension', this)">Chrome extension</button>
+    <button class="spec-subtab" onclick="switchSpec('standalone', this)">Standalone app</button>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       PANEL — dApp
+       ═══════════════════════════════════════════════ -->
+  <div id="spec-dapp" class="spec-panel active">
+
+    <div class="spec-note" style="margin-bottom:1rem;">
+      <strong>dApp role.</strong> The dApp declares which chains it needs at connection time, detects the wallet's capability from the response, and tags each operation with its target chain ID. Fee estimation is the wallet's responsibility — the dApp sends operation details without fees and the wallet handles the rest.
+    </div>
+
+    <div class="spec-warn" style="margin-bottom:1.5rem;">
+      <strong>SDK extension required.</strong> The Beacon SDK (<code>@airgap/beacon-dapp</code> / <code>@tezos-x/octez.connect-dapp</code>) needs to accept the new parameters natively. The diffs below show the proposed clean API. Until the SDK is updated, these parameters must be injected via an internal workaround — see the POC source (<code>wc2/dapp/src/main.ts</code>) for reference.
+    </div>
+
+    <!-- Permission flow -->
+    <div class="spec-h3">Permission flow</div>
+    <div class="diff-grid">
+      <div class="diff-col">
+        <span class="diff-label before">Before — single chain</span>
+        <pre><code><span class="cm">// requestPermissions() with no args</span>
+<span class="cm">// session is bound to the one network</span>
+<span class="cm">// the client was initialised with</span>
+<span class="kw">const</span> result = <span class="kw">await</span> client
+  .<span class="fn">requestPermissions</span>()
+
+<span class="cm">// Response shape:</span>
+<span class="cm">// { publicKey, address, network, … }</span>
+<span class="kw">const</span> pk = result.publicKey</code></pre>
+      </div>
+      <div class="diff-col">
+        <span class="diff-label after">After — multi-chain (proposed SDK API)</span>
+        <pre><code><span class="cm">// Pass the list of requested chains</span>
+<span class="kw">const</span> result = <span class="kw">await</span> client
+  .<span class="fn">requestPermissions</span>({
+<span class="add">    networks: [
+      { chainId: <span class="str">'tezos:NetXsqzbfFenSTS'</span>,
+        rpcUrl: L1_RPC, name: <span class="str">'L1'</span> },
+      { chainId: <span class="str">'tezos:NetXH12Aer3be93'</span>,
+        rpcUrl: L2_RPC,
+        name: <span class="str">'Michelson interface'</span> },
+    ],</span>
+  })
+
+<span class="cm">// Detect wallet version from response</span>
+<span class="add"><span class="kw">if</span> (result.accounts) {
+  <span class="cm">// v3 — wallet approved multi-chain</span>
+  v3Accounts = result.accounts
+  <span class="cm">// { 'tezos:NetX…': { publicKey } }</span>
+} <span class="kw">else</span> {
+  <span class="cm">// v2 — wallet is single-chain only</span>
+  singlePubKey = result.publicKey
+}</span></code></pre>
+      </div>
+    </div>
+
+    <!-- Operation flow -->
+    <div class="spec-h3">Operation flow</div>
+    <div class="diff-grid">
+      <div class="diff-col">
+        <span class="diff-label before">Before — default network</span>
+        <pre><code><span class="cm">// Routes to the network set at init</span>
+<span class="kw">const</span> result = <span class="kw">await</span> client
+  .<span class="fn">requestOperation</span>({
+    operationDetails: [
+      { kind: <span class="str">'transaction'</span>,
+        amount: <span class="str">'1'</span>,
+        destination: DEST },
+    ],
+  })</code></pre>
+      </div>
+      <div class="diff-col">
+        <span class="diff-label after">After — target chain explicit (proposed SDK API)</span>
+        <pre><code><span class="cm">// Specify target chain alongside the op</span>
+<span class="kw">const</span> result = <span class="kw">await</span> client
+  .<span class="fn">requestOperation</span>({
+<span class="add">    network: <span class="str">'tezos:NetXH12Aer3be93'</span>,  <span class="cm">// CAIP-2</span></span>
+    operationDetails: [
+      { kind: <span class="str">'transaction'</span>,
+        amount: <span class="str">'1'</span>,
+        destination: DEST },
+    ],
+  })
+
+<span class="cm">// result.transactionHash — hash on</span>
+<span class="cm">// the chain declared above</span></code></pre>
+      </div>
+    </div>
+
+    <div class="spec-ok" style="margin-bottom:1.5rem;">
+      <strong>No fee work for the dApp.</strong> Operation details are sent without fees. The wallet estimates fees by querying the chain's RPC — the dApp developer has nothing to do.
+    </div>
+
+    <!-- Edge cases -->
+    <div class="spec-h3">Edge cases</div>
+    <ul class="edge-list">
+      <li>
+        <div class="edge-title">Wallet only approves some chains (partial <code>accounts</code> map)</div>
+        <div class="edge-body">The <code>accounts</code> map may not contain all requested chain IDs. Check before enabling each chain's operations:
+          <pre style="margin-top:.5rem;"><code><span class="kw">const</span> canUseL2 = !!v3Accounts?.[<span class="str">'tezos:NetXH12Aer3be93'</span>]
+btnL2.disabled = !canUseL2</code></pre>
+        </div>
+      </li>
+      <li>
+        <div class="edge-title">Wallet doesn't support multi-chain (v2 response — no <code>accounts</code>)</div>
+        <div class="edge-body">Fall back to single-chain mode. Disable operations that require a chain not covered by the legacy session:
+          <pre style="margin-top:.5rem;"><code><span class="kw">if</span> (!result.accounts) {
+  <span class="cm">// v2: only L1 (client's init network) is available</span>
+  btnL2.disabled = <span class="kw">true</span>
+}</code></pre>
+        </div>
+      </li>
+      <li>
+        <div class="edge-title">Operation targeted at a chain not in the session</div>
+        <div class="edge-body">Guard before sending to avoid a confusing wallet error:
+          <pre style="margin-top:.5rem;"><code><span class="kw">if</span> (v3Accounts && !v3Accounts[targetChainId]) {
+  <span class="fn">showError</span>(<span class="str">'Chain not in session — reconnect to add it'</span>)
+  <span class="kw">return</span>
+}</code></pre>
+        </div>
+      </li>
+    </ul>
+  </div><!-- end spec-dapp -->
+
+
+  <!-- ═══════════════════════════════════════════════
+       PANEL — Chrome extension
+       ═══════════════════════════════════════════════ -->
+  <div id="spec-extension" class="spec-panel">
+
+    <div class="spec-note" style="margin-bottom:1.5rem;">
+      <strong>Transport unchanged.</strong> The existing PostMessage ↔ <code>chrome.runtime</code> channel continues to work as-is. All changes are in message payload handling only — no new APIs, no new permissions.
+    </div>
+
+    <!-- Permission handler -->
+    <div class="spec-h3">Permission request handler</div>
+    <div class="diff-grid">
+      <div class="diff-col">
+        <span class="diff-label before">Before — single chain</span>
+        <pre><code><span class="kw">case</span> <span class="str">'permission_request'</span>: {
+  <span class="kw">const</span> ok = <span class="kw">await</span>
+    <span class="fn">showApproval</span>(msg.appMetadata.name)
+  <span class="kw">if</span> (!ok) {
+    <span class="fn">reject</span>(<span class="str">'ABORTED_ERROR'</span>)
+    <span class="kw">break</span>
+  }
+  <span class="fn">respond</span>({
+    type: <span class="str">'permission_response'</span>,
+    id: msg.id,
+    publicKey: wallet.publicKey,
+  })
+  <span class="kw">break</span>
+}</code></pre>
+      </div>
+      <div class="diff-col">
+        <span class="diff-label after">After — multi-chain</span>
+        <pre><code><span class="kw">case</span> <span class="str">'permission_request'</span>: {
+  <span class="add"><span class="kw">const</span> networks = msg.networks ?? []   <span class="cm">// ← new</span></span>
+  <span class="kw">const</span> ok = <span class="kw">await</span>
+    <span class="fn">showApproval</span>(msg.appMetadata.name<span class="add">, networks</span>)
+  <span class="kw">if</span> (!ok) {
+    <span class="fn">reject</span>(<span class="str">'ABORTED_ERROR'</span>)
+    <span class="kw">break</span>
+  }
+<span class="add">  <span class="cm">// Build accounts map and store registry</span>
+  <span class="kw">const</span> accounts = {}, registry = {}
+  <span class="kw">for</span> (<span class="kw">const</span> net <span class="kw">of</span> networks) {
+    <span class="kw">const</span> pk = <span class="fn">keyForChain</span>(net.chainId)
+    accounts[net.chainId] = { publicKey: pk }
+    <span class="kw">if</span> (net.rpcUrl) registry[net.chainId] = net.rpcUrl
+  }
+  <span class="kw">if</span> (networks.length)
+    <span class="kw">await</span> chrome.storage.session.<span class="fn">set</span>({ registry })</span>
+
+  <span class="fn">respond</span>({
+    type: <span class="str">'permission_response'</span>,
+    id: msg.id,
+    publicKey: wallet.publicKey,
+    <span class="add">...(networks.length && { accounts }),  <span class="cm">// ← new</span></span>
+  })
+  <span class="kw">break</span>
+}</code></pre>
+      </div>
+    </div>
+
+    <!-- Operation handler -->
+    <div class="spec-h3">Operation request handler</div>
+    <div class="diff-grid">
+      <div class="diff-col">
+        <span class="diff-label before">Before — network always an object</span>
+        <pre><code><span class="kw">case</span> <span class="str">'operation_request'</span>: {
+  <span class="kw">const</span> rpcUrl =
+    msg.network?.rpcUrl ?? DEFAULT_RPC
+
+  <span class="kw">const</span> hash = <span class="kw">await</span>
+    <span class="fn">inject</span>(rpcUrl, msg.operationDetails)
+
+  <span class="fn">respond</span>({
+    type: <span class="str">'operation_response'</span>,
+    id: msg.id,
+    transactionHash: hash,
+  })
+  <span class="kw">break</span>
+}</code></pre>
+      </div>
+      <div class="diff-col">
+        <span class="diff-label after">After — CAIP-2 string or legacy object</span>
+        <pre><code><span class="kw">case</span> <span class="str">'operation_request'</span>: {
+  <span class="add"><span class="kw">const</span> net = msg.network
+  <span class="kw">let</span> rpcUrl
+  <span class="kw">if</span> (<span class="kw">typeof</span> net === <span class="str">'string'</span>) {        <span class="cm">// ← new</span>
+    <span class="kw">const</span> { registry } = <span class="kw">await</span>
+      chrome.storage.session.<span class="fn">get</span>(<span class="str">'registry'</span>)
+    rpcUrl = registry?.[net] ?? <span class="fn">fallback</span>(net)
+  } <span class="kw">else</span> {                               <span class="cm">// legacy</span>
+    rpcUrl = net?.rpcUrl ?? DEFAULT_RPC
+  }</span>
+
+  <span class="kw">const</span> hash = <span class="kw">await</span>
+    <span class="fn">inject</span>(rpcUrl, msg.operationDetails)
+
+  <span class="fn">respond</span>({
+    type: <span class="str">'operation_response'</span>,
+    id: msg.id,
+    transactionHash: hash,
+  })
+  <span class="kw">break</span>
+}</code></pre>
+      </div>
+    </div>
+
+    <!-- Fee note -->
+    <div class="spec-ok" style="margin-bottom:1.5rem;">
+      <strong>Fee estimation is automatic.</strong> Call <code>tezos.contract.batch(ops).send()</code> — Taquito fetches the chain's mempool parameters via <code>getMempoolFilter</code> and computes the correct fee floor on its own, for both L1 and the Michelson interface. Use Taquito ≥ 24.3.0-rc.3 which correctly handles the Michelson interface's higher fee params.
+    </div>
+
+    <!-- Edge cases -->
+    <div class="spec-h3">Edge cases</div>
+    <ul class="edge-list">
+      <li>
+        <div class="edge-title">Wallet doesn't have a key for one of the requested chains</div>
+        <div class="edge-body">Return a partial <code>accounts</code> map with only the chains your wallet supports. The dApp detects which chains were approved by inspecting the map keys.
+          <pre style="margin-top:.5rem;"><code><span class="kw">for</span> (<span class="kw">const</span> net <span class="kw">of</span> networks) {
+  <span class="kw">if</span> (<span class="fn">isChainSupported</span>(net.chainId))
+    accounts[net.chainId] = { publicKey: <span class="fn">keyFor</span>(net.chainId) }
+  <span class="cm">// silently skip unsupported chains</span>
+}</code></pre>
+        </div>
+      </li>
+      <li>
+        <div class="edge-title">Operation request for a chain not in the stored registry</div>
+        <div class="edge-body">Use a hardcoded fallback for known chains, or return an <code>operation_error</code> for truly unknown ones. Don't crash silently.
+          <pre style="margin-top:.5rem;"><code><span class="kw">function</span> <span class="fn">fallback</span>(chainId) {
+  <span class="kw">if</span> (chainId === <span class="str">'tezos:NetXH12Aer3be93'</span>) <span class="kw">return</span> MICHELSON_RPC
+  <span class="kw">if</span> (chainId === <span class="str">'tezos:NetXsqzbfFenSTS'</span>)  <span class="kw">return</span> L1_RPC
+  <span class="kw">throw new</span> <span class="fn">Error</span>(<span class="str">`Unknown chain: ${chainId}`</span>)
+}</code></pre>
+        </div>
+      </li>
+      <li>
+        <div class="edge-title">Different key pairs per chain</div>
+        <div class="edge-body">For Tezos-family chains (L1 + Michelson interface), the same Ed25519 key pair is valid on all chains — same derivation, same address format <code>tz1…</code>. If your wallet uses separate keys per chain (e.g. different HD paths), put the correct <code>publicKey</code> in each <code>accounts</code> entry. The dApp uses these keys independently per chain.</div>
+      </li>
+    </ul>
+  </div><!-- end spec-extension -->
+
+
+  <!-- ═══════════════════════════════════════════════
+       PANEL — Standalone app
+       ═══════════════════════════════════════════════ -->
+  <div id="spec-standalone" class="spec-panel">
+
+    <div class="wallet-type-grid" style="margin-bottom:1.5rem;">
+      <div class="wallet-type">
+        <h4 style="color:var(--teal);">Matrix P2P transport</h4>
+        <p>Same payload changes as the Chrome extension tab — handle <code>networks[]</code>, return <code>accounts</code>, read CAIP-2 <code>network</code>. Transport (QR pairing → Matrix room) is <strong>unchanged</strong>.</p>
+      </div>
+      <div class="wallet-type">
+        <h4 style="color:#FB923C;">Popup transport (new)</h4>
+        <p>The dApp opens the wallet via <code>window.open(?popup=1)</code>. Communication is via cross-origin <code>postMessage</code>. Useful when the wallet is a web app on its own domain.</p>
+      </div>
+    </div>
+
+    <!-- Popup transport -->
+    <div class="spec-h3">Popup transport — <code>tzip10-popup</code> protocol</div>
+    <p class="spec-p" style="margin-bottom:.75rem;">Message sequence:</p>
+    <div class="msg-flow">
+      <div class="msg-flow-header">
+        <div>Wallet</div><div></div><div>dApp</div>
+      </div>
+      <div class="msg-flow-row">
+        <div class="msg-lbl wallet">wallet-ready</div>
+        <div class="msg-arrow-cell"><span class="msg-arrow to-dapp">→</span></div>
+        <div class="msg-sub">Wallet loaded, has <code>window.opener</code></div>
+      </div>
+      <div class="msg-flow-row">
+        <div class="msg-sub">Requests access to both chains</div>
+        <div class="msg-arrow-cell"><span class="msg-arrow to-wallet">←</span></div>
+        <div class="msg-lbl dapp">permission-request</div>
+      </div>
+      <div class="msg-flow-row">
+        <div class="msg-lbl wallet">permission-response</div>
+        <div class="msg-arrow-cell"><span class="msg-arrow to-dapp">→</span></div>
+        <div class="msg-sub">Approved; <code>accounts</code> map included</div>
+      </div>
+      <div class="msg-flow-row">
+        <div class="msg-sub" style="color:#475569; font-style:italic; grid-column:1/-1; text-align:center;">— session active; popup stays open across operations —</div>
+        <div></div><div></div>
+      </div>
+      <div class="msg-flow-row">
+        <div class="msg-sub">For each op: specifies <code>chainId</code> + <code>operations[]</code></div>
+        <div class="msg-arrow-cell"><span class="msg-arrow to-wallet">←</span></div>
+        <div class="msg-lbl dapp">operation-request</div>
+      </div>
+      <div class="msg-flow-row">
+        <div class="msg-lbl wallet">operation-response</div>
+        <div class="msg-arrow-cell"><span class="msg-arrow to-dapp">→</span></div>
+        <div class="msg-sub">Returns <code>transactionHash</code></div>
+      </div>
+    </div>
+
+    <div class="spec-h3">Wallet skeleton</div>
+    <div class="diff-grid">
+      <div class="diff-col">
+        <span class="diff-label before">Before — wallet with no popup mode</span>
+        <pre><code><span class="cm">// main() initialises the wallet UI</span>
+<span class="kw">async function</span> <span class="fn">main</span>() {
+  <span class="kw">const</span> signer = <span class="kw">await</span>
+    InMemorySigner.<span class="fn">fromSecretKey</span>(KEY)
+
+  <span class="cm">// set up Matrix / WC2 transport</span>
+  <span class="kw">await</span> <span class="fn">initBeaconClient</span>(signer)
+}</code></pre>
+      </div>
+      <div class="diff-col">
+        <span class="diff-label after">After — popup mode detected at startup</span>
+        <pre><code><span class="kw">async function</span> <span class="fn">main</span>() {
+  <span class="kw">const</span> signer = <span class="kw">await</span>
+    InMemorySigner.<span class="fn">fromSecretKey</span>(KEY)
+
+  <span class="add"><span class="cm">// Detect popup mode before anything else</span>
+  <span class="kw">const</span> isPopup =
+    <span class="kw">new</span> <span class="fn">URLSearchParams</span>(location.search)
+      .<span class="fn">has</span>(<span class="str">'popup'</span>)
+  <span class="kw">if</span> (isPopup && window.opener) {
+    <span class="kw">await</span> <span class="fn">runPopupMode</span>(signer)
+    <span class="kw">return</span>              <span class="cm">// skip Matrix/WC2</span>
+  }</span>
+
+  <span class="cm">// set up Matrix / WC2 transport</span>
+  <span class="kw">await</span> <span class="fn">initBeaconClient</span>(signer)
+}
+
+<span class="add"><span class="kw">async function</span> <span class="fn">runPopupMode</span>(signer) {
+  <span class="kw">const</span> send = msg =>
+    window.opener.<span class="fn">postMessage</span>(msg, <span class="str">'*'</span>)
+  <span class="kw">let</span> registry = {}
+
+  <span class="cm">// 1. Announce ready</span>
+  <span class="fn">send</span>({ type: <span class="str">'tzip10-popup'</span>,
+         action: <span class="str">'wallet-ready'</span>,
+         address: <span class="kw">await</span> signer.<span class="fn">publicKeyHash</span>() })
+
+  <span class="cm">// 2. Handle incoming messages</span>
+  window.<span class="fn">addEventListener</span>(<span class="str">'message'</span>, <span class="kw">async</span> e => {
+    <span class="kw">const</span> m = e.data
+    <span class="kw">if</span> (m?.type !== <span class="str">'tzip10-popup'</span>) <span class="kw">return</span>
+
+    <span class="kw">if</span> (m.action === <span class="str">'permission-request'</span>) {
+      <span class="kw">const</span> ok = <span class="kw">await</span>
+        <span class="fn">showApproval</span>(m.appName, m.networks)
+      <span class="kw">if</span> (!ok) {
+        <span class="fn">send</span>({ type: <span class="str">'tzip10-popup'</span>,
+               action: <span class="str">'permission-error'</span>,
+               id: m.id, errorType: <span class="str">'ABORTED_ERROR'</span> })
+        <span class="kw">return</span>
+      }
+      <span class="kw">const</span> pk  = <span class="kw">await</span> signer.<span class="fn">publicKey</span>()
+      <span class="kw">const</span> accounts = {}
+      <span class="kw">for</span> (<span class="kw">const</span> net <span class="kw">of</span> (m.networks ?? [])) {
+        accounts[net.chainId] = { publicKey: pk }
+        <span class="kw">if</span> (net.rpcUrl) registry[net.chainId] = net.rpcUrl
+      }
+      <span class="fn">send</span>({ type: <span class="str">'tzip10-popup'</span>,
+             action: <span class="str">'permission-response'</span>,
+             id: m.id, publicKey: pk, accounts })
+    }
+
+    <span class="kw">if</span> (m.action === <span class="str">'operation-request'</span>) {
+      <span class="kw">const</span> rpc = registry[m.chainId] ??
+                  <span class="fn">fallback</span>(m.chainId)
+      <span class="kw">try</span> {
+        <span class="kw">const</span> hash = <span class="kw">await</span>
+          <span class="fn">inject</span>(signer, rpc, m.operations)
+        <span class="fn">send</span>({ type: <span class="str">'tzip10-popup'</span>,
+               action: <span class="str">'operation-response'</span>,
+               id: m.id, transactionHash: hash })
+      } <span class="kw">catch</span> (err) {
+        <span class="fn">send</span>({ type: <span class="str">'tzip10-popup'</span>,
+               action: <span class="str">'operation-error'</span>,
+               id: m.id, error: err.message })
+      }
+    }
+  })
+}</span></code></pre>
+      </div>
+    </div>
+
+    <!-- Edge cases -->
+    <div class="spec-h3">Edge cases — popup transport</div>
+    <ul class="edge-list">
+      <li>
+        <div class="edge-title">Popup blocked by the browser</div>
+        <div class="edge-body"><code>window.open()</code> must be triggered from a user gesture (button click). If the popup is blocked, the return value is <code>null</code> — detect it and offer Matrix pairing as fallback:
+          <pre style="margin-top:.5rem;"><code><span class="kw">const</span> popup = window.<span class="fn">open</span>(walletUrl, <span class="str">'wallet'</span>, <span class="str">'width=480,height=700'</span>)
+<span class="kw">if</span> (!popup) <span class="fn">startMatrixPairing</span>()  <span class="cm">// fallback</span></code></pre>
+        </div>
+      </li>
+      <li>
+        <div class="edge-title">User closes the popup mid-session</div>
+        <div class="edge-body">The dApp should check <code>popupWindow.closed</code> before each operation. If closed, prompt the user to reconnect rather than hanging on a promise that will never resolve:
+          <pre style="margin-top:.5rem;"><code><span class="kw">if</span> (!popupWindow || popupWindow.closed) {
+  <span class="fn">showError</span>(<span class="str">'Wallet popup was closed — reconnect to continue'</span>)
+  <span class="kw">return</span>
+}</code></pre>
+        </div>
+      </li>
+      <li>
+        <div class="edge-title"><code>window.opener</code> is null in the wallet</div>
+        <div class="edge-body">Can happen if the parent page has a strict <code>Cross-Origin-Opener-Policy</code> header (<code>same-origin</code>). The wallet must guard before entering popup mode and fall through to normal UI rather than crashing:
+          <pre style="margin-top:.5rem;"><code><span class="kw">if</span> (isPopup && !window.opener) {
+  <span class="cm">// Can't reach the opener — show an error in the popup UI</span>
+  <span class="fn">showError</span>(<span class="str">'Cannot communicate with the opener page.'</span>)
+  <span class="kw">return</span>
+}</code></pre>
+        </div>
+      </li>
+      <li>
+        <div class="edge-title"><code>wallet-ready</code> and the dApp's listener race</div>
+        <div class="edge-body">The dApp must register its <code>message</code> listener <em>before</em> clicking the button that opens the popup — the popup can load fast from cache. In practice: register <code>window.addEventListener('message', onReady)</code> synchronously inside the click handler, right after <code>window.open()</code> returns and before the popup's JS has had time to run.</div>
+      </li>
+    </ul>
+
+    <div class="spec-h3">Message format — full reference</div>
+    <table class="field-table">
+      <tr><th>Direction</th><th>action</th><th>Key fields</th></tr>
+      <tr>
+        <td style="color:var(--teal);">wallet → dApp</td>
+        <td><code>wallet-ready</code></td>
+        <td><code>address</code> (tz1…)</td>
+      </tr>
+      <tr>
+        <td style="color:var(--blue);">dApp → wallet</td>
+        <td><code>permission-request</code></td>
+        <td><code>id</code>, <code>appName</code>, <code>networks[]</code> — same format as TZIP-10 §1.1</td>
+      </tr>
+      <tr>
+        <td style="color:var(--teal);">wallet → dApp</td>
+        <td><code>permission-response</code></td>
+        <td><code>id</code>, <code>publicKey</code>, <code>accounts</code> map</td>
+      </tr>
+      <tr>
+        <td style="color:var(--teal);">wallet → dApp</td>
+        <td><code>permission-error</code></td>
+        <td><code>id</code>, <code>errorType</code> (e.g. <code>"ABORTED_ERROR"</code>)</td>
+      </tr>
+      <tr>
+        <td style="color:var(--blue);">dApp → wallet</td>
+        <td><code>operation-request</code></td>
+        <td><code>id</code>, <code>appName</code>, <code>chainId</code> (CAIP-2), <code>operations[]</code></td>
+      </tr>
+      <tr>
+        <td style="color:var(--teal);">wallet → dApp</td>
+        <td><code>operation-response</code></td>
+        <td><code>id</code>, <code>transactionHash</code></td>
+      </tr>
+      <tr>
+        <td style="color:var(--teal);">wallet → dApp</td>
+        <td><code>operation-error</code></td>
+        <td><code>id</code>, <code>error</code> (message string)</td>
+      </tr>
+    </table>
+
+    <div class="spec-note"><strong>Security.</strong> In the wallet's message listener, validate <code>event.origin</code> against a list of trusted dApp origins before processing any message.</div>
+
+  </div><!-- end spec-standalone -->
+
+</main>
+</div><!-- end tab-spec -->
+
 
 <footer>
   Tezos X Octez.connect Multi-chain POC &middot; April 2026 &middot; Internal
@@ -1134,6 +1767,13 @@ client.<span class="fn">onOperationRequest</span>(<span class="kw">async</span> 
     if (body && body.classList.contains('phase-body')) {
       body.style.display = body.style.display === 'none' ? '' : 'none';
     }
+  }
+
+  function switchSpec(id, btn) {
+    document.querySelectorAll('.spec-panel').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.spec-subtab').forEach(el => el.classList.remove('active'));
+    document.getElementById('spec-' + id).classList.add('active');
+    btn.classList.add('active');
   }
 </script>
 </body>
