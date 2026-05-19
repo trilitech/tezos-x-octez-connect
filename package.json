@@ -23,5 +23,16 @@
   "dependencies": {
     "@walletconnect/sign-client": "^2.23.9",
     "fake-indexeddb": "^6.2.5"
+  },
+  "overrides": {
+    "@tezos-x/octez.connect-core": "file:/home/ubuntu/projects/tezos-x-octez-connect/octez.connect/packages/octez.connect-core",
+    "@tezos-x/octez.connect-dapp": "file:/home/ubuntu/projects/tezos-x-octez-connect/octez.connect/packages/octez.connect-dapp",
+    "@tezos-x/octez.connect-wallet": "file:/home/ubuntu/projects/tezos-x-octez-connect/octez.connect/packages/octez.connect-wallet",
+    "@tezos-x/octez.connect-types": "file:/home/ubuntu/projects/tezos-x-octez-connect/octez.connect/packages/octez.connect-types",
+    "@tezos-x/octez.connect-utils": "file:/home/ubuntu/projects/tezos-x-octez-connect/octez.connect/packages/octez.connect-utils",
+    "@tezos-x/octez.connect-transport-matrix": "file:/home/ubuntu/projects/tezos-x-octez-connect/octez.connect/packages/octez.connect-transport-matrix",
+    "@tezos-x/octez.connect-transport-postmessage": "file:/home/ubuntu/projects/tezos-x-octez-connect/octez.connect/packages/octez.connect-transport-postmessage",
+    "@tezos-x/octez.connect-transport-walletconnect": "file:/home/ubuntu/projects/tezos-x-octez-connect/octez.connect/packages/octez.connect-transport-walletconnect",
+    "@tezos-x/octez.connect-ui": "file:/home/ubuntu/projects/tezos-x-octez-connect/octez.connect/packages/octez.connect-ui"
   }
 }

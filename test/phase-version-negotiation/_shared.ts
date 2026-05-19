@@ -69,40 +69,70 @@ export async function post(url: string, body?: unknown): Promise<any> {
  * and the "is the wallet upgraded?" choice are set via control
  * endpoints exposed by the wallet harness for testing only.
  */
-export async function configureWallet(transport: Transport, mode: WalletMode): Promise<void> {
+export async function configureWallet(_transport: Transport, mode: WalletMode): Promise<void> {
+  // Wallet's outgoing peer.version override. '4' = upgraded, '3' = unupgraded.
+  // Pass null on 'upgraded' so previous overrides are explicitly cleared.
   await post(`${WALLET_URL}/test-config`, {
-    transport,
-    beaconVersion: mode === 'upgraded' ? '4' : '3',
+    beaconVersion: mode === 'upgraded' ? null : '3',
+    v2Mode: false,
   })
 }
 
 /**
- * Configure the dApp harness similarly. `dappMode` translates to a
- * specific BEACON_VERSION pin (and therefore default
- * requiredMinimumVersion) on the dApp SDK.
+ * Force the wallet's permission handler into its legacy single-network
+ * branch — used to test the wallet-side backward-compat path (the
+ * cells where the dApp is "legacy"). The wallet's `v2Mode` flag
+ * exists precisely for this purpose.
  */
-export async function configureDapp(transport: Transport, mode: DappMode): Promise<void> {
-  const beaconVersion =
-    mode === 'upgraded' ? '4' : mode === 'legacy' ? '3' : '5'
-  await post(`${DAPP_URL}/test-config`, { transport, beaconVersion })
+export async function configureWalletLegacyMode(force: boolean): Promise<void> {
+  await post(`${WALLET_URL}/test-config`, { v2Mode: force })
 }
 
 /**
- * Drive a full permission handshake and collect the resulting state.
- * The dApp harness must expose:
- *   POST /request-permissions  body: { networks?: [...] }
- *   GET  /last-handshake       -> { mode, walletServedVersion?, ... }
- *   GET  /last-permission      -> { version, ... }
+ * Configure the dApp harness. Cells map to requiredMinimumVersion:
+ *   - upgraded → '4' (default for current SDK; rejects wallets < 4)
+ *   - legacy → '3' (tolerates unupgraded wallets)
+ *   - future-v5 → '5' (synthetic; throws at construction since SDK BEACON_VERSION='4')
+ *
+ * Transport selection is wallet-startup-time today and ignored by the
+ * dApp's /test-config; the scaffolds therefore only exercise the
+ * transport selected by the running wallet harness (typically Matrix).
+ */
+export async function configureDapp(_transport: Transport, mode: DappMode): Promise<void> {
+  const requiredMinimumVersion =
+    mode === 'upgraded' ? '4' : mode === 'legacy' ? '3' : '5'
+  await post(`${DAPP_URL}/test-config`, { requiredMinimumVersion })
+}
+
+/**
+ * Drive a full permission handshake. Performs reset → request-permissions
+ * → pairing-URI exchange → poll, mirroring phase2.ts's sequence.
  */
 export async function handshake(
   options: { networks?: any[] } = {},
 ): Promise<NegotiationOutcome> {
+  // Clean slate on both sides.
+  await post(`${DAPP_URL}/reset`)
+  await post(`${WALLET_URL}/reset`)
+  await new Promise((r) => setTimeout(r, 2000))
+
+  // Kick the dApp into pairing mode.
   await post(`${DAPP_URL}/request-permissions`, options)
 
-  // Poll for completion — the dApp resolves asynchronously after the
-  // wallet approves (or the SDK throws VersionUnsupportedBeaconError).
+  // Hand the pairing URI to the wallet.
+  const uri = (await fetch(`${DAPP_URL}/pairing-uri`).then((r) => r.text())) as string
+  if (!uri || uri.length < 10) {
+    throw new Error(`Invalid pairing URI from dApp: ${JSON.stringify(uri)}`)
+  }
+  await fetch(`${WALLET_URL}/connect`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain' },
+    body: uri,
+  })
+
+  // Poll for completion.
   for (let i = 0; i < 60; i++) {
-    const h = await get(`${DAPP_URL}/last-handshake`)
+    const h = await get(`${DAPP_URL}/last-handshake`).catch(() => null)
     if (h && h.mode && h.mode !== 'pending') {
       return {
         walletServedVersion: h.walletServedVersion ?? null,
@@ -130,6 +160,11 @@ export async function runScenario(
 ): Promise<void> {
   console.log(`\n=== ${label} (${transport}, wallet=${walletMode}, dapp=${dappMode}) ===`)
   await configureWallet(transport, walletMode)
+  // For "legacy dApp" cells, force the wallet into single-network mode —
+  // approximates the wallet receiving a peer.version<4 dApp without
+  // requiring an SDK rebuild of the dApp. The wallet's `v2Mode` flag
+  // makes it serve the legacy single-network shape regardless.
+  await configureWalletLegacyMode(dappMode === 'legacy')
   await configureDapp(transport, dappMode)
   const outcome = await handshake({
     networks:

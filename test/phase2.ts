@@ -143,8 +143,8 @@ async function main(): Promise<void> {
   const perm: any = await get(`${DAPP_URL}/last-permission`)
   const handshake: any = await get(`${DAPP_URL}/last-handshake`)
 
-  if (handshake?.mode !== 'v3') throw new Error(`expected mode=v3, got: ${JSON.stringify(handshake)}`)
-  console.log('✓ handshake mode: v3')
+  if (handshake?.mode !== 'multi-network') throw new Error(`expected mode=multi-network, got: ${JSON.stringify(handshake)}`)
+  console.log('✓ handshake mode: multi-network (spec 002 — peer.version=4)')
 
   if (!perm?.accounts?.[L1_CHAIN]?.publicKey)
     throw new Error(`missing accounts[${L1_CHAIN}]: ${JSON.stringify(perm)}`)
@@ -201,7 +201,7 @@ async function main(): Promise<void> {
   const permV2: any = await get(`${DAPP_URL}/last-permission`)
   const handshakeV2: any = await get(`${DAPP_URL}/last-handshake`)
 
-  if (handshakeV2?.mode !== 'v2') throw new Error(`expected mode=v2, got: ${JSON.stringify(handshakeV2)}`)
+  if (handshakeV2?.mode !== 'legacy') throw new Error(`expected mode=legacy (spec 002), got: ${JSON.stringify(handshakeV2)}`)
   if (!permV2?.publicKey) throw new Error(`expected publicKey in v2 response: ${JSON.stringify(permV2)}`)
   console.log(`✓ handshake mode: v2 (publicKey: ${permV2.publicKey})`)
 

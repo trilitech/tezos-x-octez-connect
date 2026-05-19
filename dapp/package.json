@@ -6,7 +6,8 @@
     "start": "tsx src/index.ts"
   },
   "dependencies": {
-    "@tezos-x/octez.connect-dapp": "4.8.3",
+    "@tezos-x/octez.connect-dapp": "file:/home/ubuntu/projects/tezos-x-octez-connect/octez.connect/packages/octez.connect-dapp",
+    "@tezos-x/octez.connect-core": "file:/home/ubuntu/projects/tezos-x-octez-connect/octez.connect/packages/octez.connect-core",
     "express": "^4.21.2"
   },
   "devDependencies": {

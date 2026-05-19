@@ -9,7 +9,8 @@
   "dependencies": {
     "@taquito/signer": "^24.2.0",
     "@taquito/taquito": "^24.2.0",
-    "@tezos-x/octez.connect-wallet": "4.8.3",
+    "@tezos-x/octez.connect-wallet": "file:/home/ubuntu/projects/tezos-x-octez-connect/octez.connect/packages/octez.connect-wallet",
+    "@tezos-x/octez.connect-core": "file:/home/ubuntu/projects/tezos-x-octez-connect/octez.connect/packages/octez.connect-core",
     "@walletconnect/sign-client": "^2.18.0",
     "express": "^4.21.2"
   },

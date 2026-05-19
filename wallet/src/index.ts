@@ -129,10 +129,11 @@ async function executeOps(
     const estimates = await tezos.estimate.batch(ops)
     const opsWithFees = ops.map((op: any, i: number) => ({
       ...op,
-      // ×2 safety margin: Taquito 24.2.0 underestimates fees on tezlink
-      fee: Math.ceil((estimates[i]?.suggestedFeeMutez ?? 0) * 2),
-      gasLimit: Math.ceil((estimates[i]?.gasLimit ?? 1000) * 1.5),
-      storageLimit: estimates[i]?.storageLimit ?? 257,
+      // ×2 fee, ×3 gas, ×2 storage safety margin: Taquito 24.2.0 underestimates
+      // on the Tezos X previewnet (Michelson protocol PtTALL…).
+      fee: Math.ceil((estimates[i]?.suggestedFeeMutez ?? 0) * 2) + 100,
+      gasLimit: Math.max(Math.ceil((estimates[i]?.gasLimit ?? 1000) * 3), 5000),
+      storageLimit: Math.max(estimates[i]?.storageLimit ?? 257, 300),
     }))
     const result = await tezos.contract.batch(opsWithFees).send()
 
@@ -260,9 +261,28 @@ async function main(): Promise<void> {
       //   peer.version >= '4' → multi-network handler (reads networks[])
       //   peer.version <  '4' → legacy handler (single-network)
       // No `networks ?? []` field-presence detection.
-      const peerVersion = Number((message as any).version ?? '0')
+      // Spec 002-peer-version-handshake: route on peer.version sourced
+      // from PeerManager (the authoritative store), not from the message
+      // envelope. The SDK currently hardcodes `version: '2'` on the
+      // inner permission_request envelope (legacy compat stamp), so the
+      // envelope version is NOT the routing key. The dApp's pairing
+      // payload carries the real peer.version (= BEACON_VERSION at the
+      // dApp), which the wallet stored at pairing time.
+      const peers = await client.getPeers()
+      const senderId = (message as any).senderId
+      const matchingPeer = peers.find(
+        (p: any) => p.senderId === senderId || p.publicKey === senderId,
+      ) as any
+      const peerVersionStr =
+        matchingPeer?.version ??
+        (message as any).peerVersion ??
+        (message as any).version ??
+        '0'
+      const peerVersion = Number(peerVersionStr)
       const isMultiNetwork =
         !v2Mode && Number.isFinite(peerVersion) && peerVersion >= 4
+
+      console.log(`[wallet] permission_request received: peerVersion=${peerVersionStr} (from ${matchingPeer ? 'peerManager' : 'envelope'}), innerVersion=${(message as any).version}, isMultiNetwork=${isMultiNetwork}, networks=${JSON.stringify((message as any).networks)}`)
 
       if (isMultiNetwork) {
         // Multi-network handler — networks[] is guaranteed to be the
@@ -337,9 +357,11 @@ async function main(): Promise<void> {
           const estimates = await tezos.estimate.batch(ops)
           const opsWithFees = ops.map((op: any, i: number) => ({
             ...op,
-            fee: Math.ceil((estimates[i]?.suggestedFeeMutez ?? 0) * 2),
-            gasLimit: Math.ceil((estimates[i]?.gasLimit ?? 1000) * 1.5),
-            storageLimit: estimates[i]?.storageLimit ?? 257,
+            // ×2 fee, ×3 gas, ×2 storage safety margin: Taquito 24.2.0 underestimates
+            // on the Tezos X previewnet (Michelson protocol PtTALL…).
+            fee: Math.ceil((estimates[i]?.suggestedFeeMutez ?? 0) * 2) + 100,
+            gasLimit: Math.max(Math.ceil((estimates[i]?.gasLimit ?? 1000) * 3), 5000),
+            storageLimit: Math.max(estimates[i]?.storageLimit ?? 257, 300),
           }))
 
           // Snapshot counter before injection so we can detect inclusion.
@@ -384,6 +406,13 @@ async function main(): Promise<void> {
         } as any)
       } catch (err: any) {
         console.error('[wallet] operation error:', err.message)
+        console.error('[wallet] operation error full:', JSON.stringify({
+          name: err.name,
+          message: err.message,
+          status: err.status,
+          body: err.body?.slice?.(0, 600) ?? err.body,
+          errors: err.errors,
+        }, null, 2).slice(0, 1500))
         await client.respond({
           type: BeaconMessageType.Error,
           id: message.id,
@@ -401,8 +430,20 @@ async function main(): Promise<void> {
   app.post('/connect', async (req, res) => {
     try {
       const uri = req.body as string
-      const peer = await new Serializer().deserialize(uri)
-      await client.addPeer(peer as any)
+      const peer = await new Serializer().deserialize(uri) as any
+      // Spec 002-peer-version-handshake harness: if a beaconVersion
+      // override is set, downgrade the incoming peer.version BEFORE
+      // addPeer. This makes the wallet's getPeerInfo use the downgraded
+      // value for its pairing response, so the dApp's PeerManager
+      // stores the downgraded peer.version. That's what makes the
+      // dApp-side SDK see the wallet as "unupgraded" (peer.version='3')
+      // and raise VersionUnsupportedBeaconError. Test-only.
+      console.log(`[wallet] /connect: peer.version=${peer?.version}, override=${overrideOutgoingVersion}`)
+      if (overrideOutgoingVersion && peer && typeof peer === 'object') {
+        peer.version = overrideOutgoingVersion
+        console.log(`[wallet] /connect: after override, peer.version=${peer.version}`)
+      }
+      await client.addPeer(peer)
       res.sendStatus(200)
     } catch (err: any) {
       console.error('[wallet] addPeer error:', err.message)
@@ -441,14 +482,20 @@ async function main(): Promise<void> {
    */
   app.post('/test-config', (req, res) => {
     const body = (req.body ?? {}) as any
-    const targetVersion = body.beaconVersion ?? body.overrideOutgoingVersion ?? null
-    if (targetVersion !== null && !/^\d+$/.test(String(targetVersion))) {
-      res.status(400).json({
-        error: 'beaconVersion must be a decimal-integer string or null',
-      })
-      return
+    // Only update overrideOutgoingVersion when the caller explicitly
+    // includes a beaconVersion (or overrideOutgoingVersion) key. Omitting
+    // the key MUST preserve the existing override; this lets clients
+    // set v2Mode independently without clobbering the version override.
+    if ('beaconVersion' in body || 'overrideOutgoingVersion' in body) {
+      const targetVersion = body.beaconVersion ?? body.overrideOutgoingVersion ?? null
+      if (targetVersion !== null && !/^\d+$/.test(String(targetVersion))) {
+        res.status(400).json({
+          error: 'beaconVersion must be a decimal-integer string or null',
+        })
+        return
+      }
+      overrideOutgoingVersion = targetVersion === null ? null : String(targetVersion)
     }
-    overrideOutgoingVersion = targetVersion === null ? null : String(targetVersion)
     if (typeof body.v2Mode === 'boolean') {
       v2Mode = body.v2Mode
     }

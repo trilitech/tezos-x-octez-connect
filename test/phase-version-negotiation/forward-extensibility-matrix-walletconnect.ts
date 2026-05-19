@@ -1,24 +1,36 @@
 /**
- * Spec 002-peer-version-handshake, T033 (US3) — WalletConnect v2.
+ * Forward-extensibility, WC2 transport (T033).
  *
- * Mirrors forward-extensibility-matrix-p2p.ts for WC2.
+ * The SDK's construction-time enforcement of
+ * `requiredMinimumVersion <= BEACON_VERSION` is transport-agnostic —
+ * DAppClient throws InvalidRequiredMinimumVersionError before any
+ * transport is even selected. Re-running the same test under the WC2
+ * scaffold verifies the contract is consistent across transports.
  *
  * Run: tsx test/phase-version-negotiation/forward-extensibility-matrix-walletconnect.ts
  */
-import { runScenario, assert } from './_shared'
+import { DAPP_URL, WALLET_URL, get, post, assert } from './_shared'
 
 ;(async () => {
-  await runScenario(
-    'v5 dApp × v4 wallet — WC2',
-    'walletconnect',
-    'upgraded',
-    'future-v5',
-    (o) => {
-      assert(o.errorCode === 'VERSION_UNSUPPORTED', `errorCode was ${o.errorCode}`)
-      assert(o.walletServedVersion === '4', `served ${o.walletServedVersion}`)
-      assert(o.requiredMinimumVersion === '5', `req min ${o.requiredMinimumVersion}`)
-    },
-  )
+  console.log('\n=== forward-extensibility (WC2): v5 dApp construction-time error ===')
+
+  await post(`${DAPP_URL}/test-config`, { requiredMinimumVersion: '5' })
+  await post(`${DAPP_URL}/reset`)
+  await post(`${WALLET_URL}/reset`).catch(() => {})
+
+  const handshake: any = await get(`${DAPP_URL}/last-handshake`)
+  console.log('  outcome:', handshake)
+  assert(handshake?.mode === 'construction_error', `mode was ${handshake?.mode}`)
+  assert(handshake?.errorCode === 'INVALID_REQUIRED_MINIMUM_VERSION',
+    `errorCode was ${handshake?.errorCode}`)
+  assert(handshake?.requiredMinimumVersion === '5',
+    `requiredMinimumVersion was ${handshake?.requiredMinimumVersion}`)
+  assert(handshake?.sdkBeaconVersion === '4',
+    `sdkBeaconVersion was ${handshake?.sdkBeaconVersion}`)
+  console.log('  PASS')
+
+  await post(`${DAPP_URL}/test-config`, { requiredMinimumVersion: null })
+  await post(`${DAPP_URL}/reset`)
 
   console.log('\nForward-extensibility scenario (WC2) passed.')
 })().catch((err) => {
