@@ -25,9 +25,9 @@ import { MemoryStorage } from './storage'
 const PORT = parseInt(process.env.PORT ?? '5174')
 
 const WC2_PROJECT_ID = 'fb4d4407a8fe167d79bd14b5afcc7230'
-const L2_CHAIN  = 'tezos:NetXH12Aer3be93'
+const L2_CHAIN  = 'tezos:NetXY2oPPzkxUW1'
 const L1_RPC    = 'https://rpc.shadownet.teztnets.com'
-const L2_RPC    = 'https://demo.txpark.nomadic-labs.com/rpc/tezlink'
+const L2_RPC    = 'https://michelson.previewnet.tezosx.nomadic-labs.com'
 
 // Suppress SDK-internal crashes so the Express server stays alive.
 // The "unload" library (imported by broadcast-channel which is used by octez.connect-wallet)
@@ -77,6 +77,23 @@ const DEFAULT_RPC = 'https://rpc.shadownet.teztnets.com'
 // V2_MODE=true → wallet ignores networks[] and responds in legacy v2 shape (for backward-compat test)
 let v2Mode: boolean = process.env.V2_MODE === 'true'
 
+/**
+ * Spec 002-peer-version-handshake test-harness flag.
+ *
+ * When set (via POST /test-config or env OVERRIDE_OUTGOING_VERSION), the
+ * wallet simulates an "unupgraded wallet" by mutating the incoming
+ * message's `version` field BEFORE calling client.respond(). The SDK's
+ * OutgoingResponseInterceptor mirrors `request.version` onto the
+ * outgoing response, so a value of '3' here causes the wallet to
+ * respond with peer.version='3' even when the dApp sent '4' — which
+ * is exactly what the dApp-side SDK uses to detect an unupgraded
+ * wallet and raise VersionUnsupportedBeaconError.
+ *
+ * This flag is test-only. Leave unset for normal operation.
+ */
+let overrideOutgoingVersion: string | null =
+  process.env.OVERRIDE_OUTGOING_VERSION ?? null
+
 // chainId (CAIP-2) → rpcUrl — populated from networks[] on permission_request
 let networkRegistry: Record<string, string> = {}
 
@@ -100,7 +117,7 @@ async function executeOps(
   const tezos = new TezosToolkit(rpcUrl)
   tezos.setSignerProvider(signer)
 
-  const isL2 = rpcUrl.includes('txpark') || rpcUrl.includes('tezlink')
+  const isL2 = rpcUrl.includes('txpark') || rpcUrl.includes('tezlink') || rpcUrl.includes('michelson.previewnet.tezosx')
   const ops = operations.map((op: any) => {
     if (op.kind === 'transaction') {
       return { kind: 'transaction' as const, to: op.destination, amount: parseInt(op.amount, 10), mutez: true }
@@ -228,6 +245,14 @@ async function main(): Promise<void> {
   await client.init()
 
   await client.connect(async (message) => {
+    // Test-only: mutate the incoming version to simulate an unupgraded
+    // wallet. The SDK's OutgoingResponseInterceptor mirrors
+    // request.version onto the outgoing response, so this propagates
+    // automatically. See spec 002-peer-version-handshake T021 cell B.
+    if (overrideOutgoingVersion) {
+      ;(message as any).version = overrideOutgoingVersion
+    }
+
     if (message.type === BeaconMessageType.PermissionRequest) {
       // Spec 002-peer-version-handshake: single-branch routing on the
       // peer.version that arrived with the message. v2Mode forces legacy
@@ -307,7 +332,7 @@ async function main(): Promise<void> {
 
         // tezlink (Michelson L2): estimate fees first, then apply 2× safety margin
         let result: any
-        const isL2 = rpcUrl.includes('txpark') || rpcUrl.includes('tezlink')
+        const isL2 = rpcUrl.includes('txpark') || rpcUrl.includes('tezlink') || rpcUrl.includes('michelson.previewnet.tezosx')
         if (isL2) {
           const estimates = await tezos.estimate.batch(ops)
           const opsWithFees = ops.map((op: any, i: number) => ({
@@ -397,6 +422,41 @@ async function main(): Promise<void> {
     if (mode === 'v2') { v2Mode = true; res.sendStatus(200) }
     else if (mode === 'v3') { v2Mode = false; res.sendStatus(200) }
     else res.status(400).json({ error: 'mode must be "v2" or "v3"' })
+  })
+
+  /**
+   * POST /test-config — spec 002-peer-version-handshake harness control.
+   *
+   * Body shape:
+   *   {
+   *     beaconVersion?: string  // e.g. '3' simulates an unupgraded wallet
+   *     overrideOutgoingVersion?: string  // alias of beaconVersion
+   *     transport?: 'matrix' | 'walletconnect' | 'postmessage'  // ignored today;
+   *       transport is selected at wallet startup. Accepted in the API
+   *       for symmetry with the dApp harness and forward compat.
+   *     v2Mode?: boolean  // explicit legacy-mode override (same as POST /set-mode).
+   *   }
+   *
+   * Pass an empty body `{}` to clear all overrides.
+   */
+  app.post('/test-config', (req, res) => {
+    const body = (req.body ?? {}) as any
+    const targetVersion = body.beaconVersion ?? body.overrideOutgoingVersion ?? null
+    if (targetVersion !== null && !/^\d+$/.test(String(targetVersion))) {
+      res.status(400).json({
+        error: 'beaconVersion must be a decimal-integer string or null',
+      })
+      return
+    }
+    overrideOutgoingVersion = targetVersion === null ? null : String(targetVersion)
+    if (typeof body.v2Mode === 'boolean') {
+      v2Mode = body.v2Mode
+    }
+    res.json({
+      overrideOutgoingVersion,
+      v2Mode,
+      note: 'transport selection is set at wallet startup; restart with TRANSPORT=... to change it',
+    })
   })
 
   // GET /wc2-ready — 200 once WC2 SignClient is initialized and listening

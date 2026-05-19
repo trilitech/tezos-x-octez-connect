@@ -28,8 +28,9 @@ wallets need no modification at all.
 > the dApp-side SDK detects unupgraded wallets via the wallet's
 > response `peer.version` and raises `VersionUnsupportedBeaconError`.
 > No new wire field is introduced. Reference SDK implementation:
-> [`octez.connect@feat/peer-version-handshake`](../specs/002-peer-version-handshake/demo-branch.md)
-> commit `5e8d1adb`. Implementers should follow §4 and treat §2/§3
+> [`octez.connect@feat/peer-version-handshake`](https://github.com/trilitech/octez.connect/tree/feat/peer-version-handshake)
+> (head `ac3194a1`, see [`demo-branch.md`](../specs/002-peer-version-handshake/demo-branch.md) for full
+> commit list). Implementers should follow §4 and treat §2/§3
 > code samples as **illustrations of the protocol-level payload
 > shapes only**, not as the recommended routing pattern.
 
@@ -55,7 +56,7 @@ A dApp that wants a multi-chain session includes a `networks` array in the permi
       "name": "Tezos X L1"
     },
     {
-      "chainId": "tezos:NetXH12Aer3be93",
+      "chainId": "tezos:NetXY2oPPzkxUW1",
       "rpcUrl": "https://demo.txpark.nomadic-labs.com/rpc/tezlink",
       "name": "Tezos X Michelson interface"
     }
@@ -86,7 +87,7 @@ If the wallet accepts a multi-chain request, it includes an `accounts` map in th
 
   "accounts": {
     "tezos:NetXsqzbfFenSTS": { "publicKey": "edpk..." },
-    "tezos:NetXH12Aer3be93": { "publicKey": "edpk..." }
+    "tezos:NetXY2oPPzkxUW1": { "publicKey": "edpk..." }
   }
 }
 ```
@@ -108,7 +109,7 @@ The `network` field on `operation_request` can now be a bare CAIP-2 string:
   "id": "<request-id>",
   "operationDetails": [...],
 
-  "network": "tezos:NetXH12Aer3be93"
+  "network": "tezos:NetXY2oPPzkxUW1"
 }
 ```
 
@@ -191,7 +192,7 @@ The approval popup should list each requested chain with its name and chain ID:
 My dApp wants to connect to:
 
   ● Tezos X L1          (tezos:NetXsqzbfFenSTS)
-  ● Michelson interface (tezos:NetXH12Aer3be93)
+  ● Michelson interface (tezos:NetXY2oPPzkxUW1)
 
   Your address: tz1VSUr8…Cjcjb
 
@@ -250,7 +251,7 @@ const opsWithFees = operations.map((op, i) => ({
 const result = await tezos.contract.batch(opsWithFees).send()
 ```
 
-You can detect the Michelson interface by checking the chain ID (`NetXH12Aer3be93`) or by calling `/chains/main/mempool/filter` on the RPC and checking `minimal_fees` > 100.
+You can detect the Michelson interface by checking the chain ID (`NetXY2oPPzkxUW1`) or by calling `/chains/main/mempool/filter` on the RPC and checking `minimal_fees` > 100.
 
 ---
 
@@ -318,7 +319,7 @@ wallet ──────────── operation-response ─────�
   "appName": "My dApp",
   "networks": [
     { "chainId": "tezos:NetXsqzbfFenSTS", "rpcUrl": "...", "name": "Tezos X L1" },
-    { "chainId": "tezos:NetXH12Aer3be93", "rpcUrl": "...", "name": "Michelson interface" }
+    { "chainId": "tezos:NetXY2oPPzkxUW1", "rpcUrl": "...", "name": "Michelson interface" }
   ]
 }
 ```
@@ -332,7 +333,7 @@ wallet ──────────── operation-response ─────�
   "publicKey": "edpk…",
   "accounts": {
     "tezos:NetXsqzbfFenSTS": { "publicKey": "edpk…" },
-    "tezos:NetXH12Aer3be93": { "publicKey": "edpk…" }
+    "tezos:NetXY2oPPzkxUW1": { "publicKey": "edpk…" }
   }
 }
 ```
@@ -349,7 +350,7 @@ wallet ──────────── operation-response ─────�
   "action": "operation-request",
   "id": "<uuid>",
   "appName": "My dApp",
-  "chainId": "tezos:NetXH12Aer3be93",
+  "chainId": "tezos:NetXY2oPPzkxUW1",
   "operations": [
     {
       "kind": "transaction",
@@ -534,9 +535,9 @@ carry version information. The negotiation contract names
 ## 5. Reference implementation
 
 **SDK changes.** The reference SDK implementation lives on the
-`feat/peer-version-handshake` branch of
-[`trilitech/octez.connect`](https://github.com/trilitech/octez.connect),
-at commit `5e8d1adbb6d7d15897d6706d72c57c083839d3aa`. See
+[`feat/peer-version-handshake`](https://github.com/trilitech/octez.connect/tree/feat/peer-version-handshake)
+branch of [`trilitech/octez.connect`](https://github.com/trilitech/octez.connect),
+head commit `ac3194a1` (4 commits ahead of master). See
 [`specs/002-peer-version-handshake/demo-branch.md`](../specs/002-peer-version-handshake/demo-branch.md)
 in this repo for reproduction steps. The branch contains three
 reviewable commits (foundational scaffolding + wallet single-branch
@@ -553,4 +554,4 @@ Validated transports:
 | WalletConnect v2 | ✓ validated | `test/phase5.ts` |
 | Popup (`tzip10-popup`) | ✓ validated | `test/phase6.ts` (Playwright) |
 
-Chains tested: Shadownet L1 (`tezos:NetXsqzbfFenSTS`) + Michelson interface (`tezos:NetXH12Aer3be93`).
+Chains tested: Shadownet L1 (`tezos:NetXsqzbfFenSTS`) + Michelson interface (`tezos:NetXY2oPPzkxUW1`).

@@ -365,7 +365,7 @@
       </div>
 
       <div class="note warn">
-        <strong>SDK extension required.</strong> The Beacon SDK (<code>@airgap/beacon-dapp</code> / <code>@tezos-x/octez.connect-dapp</code>) needs to (a) bump <code>BEACON_VERSION</code> to <code>"4"</code>, (b) accept a first-class <code>networks</code> option on <code>requestPermissions</code>, and (c) raise <code>VersionUnsupportedBeaconError</code> when the wallet's served <code>peer.version</code> is below the dApp's <code>requiredMinimumVersion</code>. The reference implementation lives on the <code>feat/peer-version-handshake</code> branch of <code>trilitech/octez.connect</code> at commit <code>5e8d1adb</code>; see <a href="https://github.com/trilitech/tezos-x-octez-connect/blob/main/specs/002-peer-version-handshake/demo-branch.md"><code>specs/002-peer-version-handshake/demo-branch.md</code></a> for reproduction.
+        <strong>SDK extension required.</strong> The Beacon SDK (<code>@airgap/beacon-dapp</code> / <code>@tezos-x/octez.connect-dapp</code>) needs to (a) bump <code>BEACON_VERSION</code> to <code>"4"</code>, (b) accept a first-class <code>networks</code> option on <code>requestPermissions</code>, and (c) raise <code>VersionUnsupportedBeaconError</code> when the wallet's served <code>peer.version</code> is below the dApp's <code>requiredMinimumVersion</code>. The reference implementation lives on the <a href="https://github.com/trilitech/octez.connect/tree/feat/peer-version-handshake"><code>feat/peer-version-handshake</code></a> branch of <code>trilitech/octez.connect</code> (head <code>ac3194a1</code>); see <a href="https://github.com/trilitech/tezos-x-octez-connect/blob/main/specs/002-peer-version-handshake/demo-branch.md"><code>specs/002-peer-version-handshake/demo-branch.md</code></a> for reproduction.
       </div>
 
       <h4>Permission flow</h4>
@@ -390,7 +390,7 @@
 <span class="add">    networks: [
       { chainId: <span class="str">'tezos:NetXsqzbfFenSTS'</span>,
         rpcUrl: L1_RPC, name: <span class="str">'L1'</span> },
-      { chainId: <span class="str">'tezos:NetXH12Aer3be93'</span>,
+      { chainId: <span class="str">'tezos:NetXY2oPPzkxUW1'</span>,
         rpcUrl: L2_RPC,
         name: <span class="str">'Michelson interface'</span> },
     ],</span>
@@ -423,7 +423,7 @@
           <pre><code><span class="cm">// Specify target chain alongside the op</span>
 <span class="kw">const</span> result = <span class="kw">await</span> client
   .<span class="fn">requestOperation</span>({
-<span class="add">    network: <span class="str">'tezos:NetXH12Aer3be93'</span>,  <span class="cm">// CAIP-2</span></span>
+<span class="add">    network: <span class="str">'tezos:NetXY2oPPzkxUW1'</span>,  <span class="cm">// CAIP-2</span></span>
     operationDetails: [
       { kind: <span class="str">'transaction'</span>,
         amount: <span class="str">'1'</span>,
@@ -445,7 +445,7 @@
         <li>
           <div class="edge-title">Wallet only approves some chains (partial <code>accounts</code> map)</div>
           <div class="edge-body">The <code>accounts</code> map may not contain all requested chain IDs. Check before enabling each chain's operations:
-            <pre><code><span class="kw">const</span> canUseL2 = !!v3Accounts?.[<span class="str">'tezos:NetXH12Aer3be93'</span>]
+            <pre><code><span class="kw">const</span> canUseL2 = !!v3Accounts?.[<span class="str">'tezos:NetXY2oPPzkxUW1'</span>]
 btnL2.disabled = !canUseL2</code></pre>
           </div>
         </li>
@@ -611,7 +611,7 @@ btnL2.disabled = !canUseL2</code></pre>
           <div class="edge-title">Operation request for a chain not in the stored registry</div>
           <div class="edge-body">Use a hardcoded fallback for known chains, or return an <code>operation_error</code> for truly unknown ones. Don't crash silently.
             <pre><code><span class="kw">function</span> <span class="fn">fallback</span>(chainId) {
-  <span class="kw">if</span> (chainId === <span class="str">'tezos:NetXH12Aer3be93'</span>) <span class="kw">return</span> MICHELSON_RPC
+  <span class="kw">if</span> (chainId === <span class="str">'tezos:NetXY2oPPzkxUW1'</span>) <span class="kw">return</span> MICHELSON_RPC
   <span class="kw">if</span> (chainId === <span class="str">'tezos:NetXsqzbfFenSTS'</span>)  <span class="kw">return</span> L1_RPC
   <span class="kw">throw new</span> <span class="fn">Error</span>(<span class="str">`Unknown chain: ${chainId}`</span>)
 }</code></pre>

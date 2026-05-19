@@ -4,7 +4,7 @@ Proof of concept for extending Octez.connect (TZIP-10) to support single-session
 
 ## Status
 
-All six phases of the original POC are validated and done. The protocol-version mechanism was subsequently revised — the multi-chain protocol is now routed by the existing `peer.version` field (bumped from `'3'` to `'4'`) rather than by response-shape detection. See [`specs/002-peer-version-handshake/`](specs/002-peer-version-handshake/) for the spec, plan, and contracts, and [`specs/002-peer-version-handshake/demo-branch.md`](specs/002-peer-version-handshake/demo-branch.md) for the reference SDK implementation on `feat/peer-version-handshake` of `trilitech/octez.connect`.
+All six phases of the original POC are validated and done. The protocol-version mechanism was subsequently revised — the multi-chain protocol is now routed by the existing `peer.version` field (bumped from `'3'` to `'4'`) rather than by response-shape detection. See [`specs/002-peer-version-handshake/`](specs/002-peer-version-handshake/) for the spec, plan, and contracts, and the [`feat/peer-version-handshake`](https://github.com/trilitech/octez.connect/tree/feat/peer-version-handshake) branch of `trilitech/octez.connect` (head `ac3194a1`) for the reference SDK implementation.
 
 ## Documents
 

@@ -62,7 +62,7 @@ test.describe('Phase 6 — Popup transport', () => {
     // Verify both chains present in connection label
     const connLabel = await page.locator('#conn-label').textContent()
     expect(connLabel).toContain('NetXsqzbfFenSTS')   // L1
-    expect(connLabel).toContain('NetXH12Aer3be93')   // Michelson
+    expect(connLabel).toContain('NetXY2oPPzkxUW1')   // Michelson
 
     // ── Step 4: L1 transfer ────────────────────────────────────────────────────
     const btnL1 = page.locator('#btn-l1')

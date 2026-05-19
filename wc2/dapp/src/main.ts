@@ -7,13 +7,16 @@ import {
 } from '@tezos-x/octez.connect-dapp'
 
 const L1_CHAIN   = 'tezos:NetXsqzbfFenSTS'
-const L2_CHAIN   = 'tezos:NetXH12Aer3be93'
+const L2_CHAIN   = 'tezos:NetXY2oPPzkxUW1'
 const L1_RPC     = 'https://rpc.shadownet.teztnets.com'
-const L2_RPC     = 'https://demo.txpark.nomadic-labs.com/rpc/tezlink'
+const L2_RPC     = 'https://michelson.previewnet.tezosx.nomadic-labs.com'
 const DEST       = 'tz1VSUr8wwNhLAzempoch5d6hLRiTh8Cjcjb'
 const L2_CONTRACT = 'KT1PWPM4rXF8QhouXmF8EugxFvYcdfiz6L3z'
 const L1_TZKT    = 'https://api.shadownet.tzkt.io'
-const L2_TZKT    = 'https://demo.txpark.nomadic-labs.com/tzkt'
+// L2 TzKT endpoint — the L2 RPC moved to previewnet.tezosx; if a TzKT mirror
+// is hosted for it, set this to that URL. Otherwise the dApp falls back to
+// account-counter polling on the RPC, same as test/phase5.ts:67.
+const L2_TZKT    = ''
 
 const WALLET_POPUP_URL = (import.meta as any).env?.VITE_WALLET_URL ?? 'http://localhost:5174'
 const PM_TYPE = 'tzip10-popup'

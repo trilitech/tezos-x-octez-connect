@@ -17,9 +17,9 @@ export {}  // ensure isolated module scope
 const DAPP_URL = process.env.DAPP_URL ?? 'http://localhost:5173'
 const WALLET_URL = process.env.WALLET_URL ?? 'http://localhost:5174'
 const L1_RPC = 'https://rpc.shadownet.teztnets.com'
-const L2_RPC = 'https://demo.txpark.nomadic-labs.com/rpc/tezlink'
+const L2_RPC = 'https://michelson.previewnet.tezosx.nomadic-labs.com'
 const L1_CHAIN = 'tezos:NetXsqzbfFenSTS'
-const L2_CHAIN = 'tezos:NetXH12Aer3be93'
+const L2_CHAIN = 'tezos:NetXY2oPPzkxUW1'
 const DEST = process.env.DEST ?? 'tz1VSUr8wwNhLAzempoch5d6hLRiTh8Cjcjb'
 
 async function get(url: string): Promise<unknown> {

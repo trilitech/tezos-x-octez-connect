@@ -24,9 +24,9 @@
 export const DAPP_URL = process.env.DAPP_URL ?? 'http://localhost:5173'
 export const WALLET_URL = process.env.WALLET_URL ?? 'http://localhost:5174'
 export const L1_CHAIN = 'tezos:NetXsqzbfFenSTS'
-export const L2_CHAIN = 'tezos:NetXH12Aer3be93'
+export const L2_CHAIN = 'tezos:NetXY2oPPzkxUW1'
 export const L1_RPC = 'https://rpc.shadownet.teztnets.com'
-export const L2_RPC = 'https://demo.txpark.nomadic-labs.com/rpc/tezlink'
+export const L2_RPC = 'https://michelson.previewnet.tezosx.nomadic-labs.com'
 
 export type Transport = 'matrix' | 'walletconnect' | 'postmessage'
 export type WalletMode = 'upgraded' | 'unupgraded'

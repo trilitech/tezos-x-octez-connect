@@ -408,7 +408,7 @@
     <div class="obj">
       <div class="obj-num">Objective 2</div>
       <h3>Protocol change demonstration</h3>
-      <p>Show the concrete delta to the Octez.connect (TZIP-10) protocol — <code>peer.version</code> bumps from <code>'3'</code> to <code>'4'</code> as the single routing key, optional <code>networks[]</code> on <code>permission_request</code> on the v4 path, explicit <code>network</code> routing on <code>operation_request</code> — and prove backward compatibility (no new wire field, dApp-side rejection for unupgraded wallets). Reference SDK implementation: <a href="https://github.com/trilitech/tezos-x-octez-connect/blob/main/specs/002-peer-version-handshake/demo-branch.md"><code>octez.connect@feat/peer-version-handshake</code></a> commit <code>5e8d1adb</code>.</p>
+      <p>Show the concrete delta to the Octez.connect (TZIP-10) protocol — <code>peer.version</code> bumps from <code>'3'</code> to <code>'4'</code> as the single routing key, optional <code>networks[]</code> on <code>permission_request</code> on the v4 path, explicit <code>network</code> routing on <code>operation_request</code> — and prove backward compatibility (no new wire field, dApp-side rejection for unupgraded wallets). Reference SDK implementation: <a href="https://github.com/trilitech/octez.connect/tree/feat/peer-version-handshake"><code>octez.connect@feat/peer-version-handshake</code></a> (head <code>ac3194a1</code>); see also <a href="https://github.com/trilitech/tezos-x-octez-connect/blob/main/specs/002-peer-version-handshake/demo-branch.md"><code>demo-branch.md</code></a>.</p>
     </div>
     <div class="obj">
       <div class="obj-num">Objective 3</div>
@@ -431,7 +431,7 @@
         </tr>
         <tr>
           <td>Michelson interface (L2)</td>
-          <td><code>tezos:NetXH12Aer3be93</code></td>
+          <td><code>tezos:NetXY2oPPzkxUW1</code></td>
           <td><code>https://demo.txpark.nomadic-labs.com/rpc/tezlink</code></td>
         </tr>
         <tr>
@@ -470,7 +470,7 @@
       <span class="phase-status st-done">Done</span>
     </div>
     <div class="phase-row-outcome">
-      <strong>Outcome:</strong> Both chain IDs confirmed — L1 <code>tezos:NetXsqzbfFenSTS</code> (shadownet), Michelson L2 <code>tezos:NetXH12Aer3be93</code> (tezlink). No blocker for Phases 1–3.
+      <strong>Outcome:</strong> Both chain IDs confirmed — L1 <code>tezos:NetXsqzbfFenSTS</code> (shadownet), Michelson L2 <code>tezos:NetXY2oPPzkxUW1</code> (tezlink). No blocker for Phases 1–3.
     </div>
   </div>
 
@@ -743,7 +743,7 @@
           <h4>Confirmed chain IDs</h4>
           <ul>
             <li class="check">L1 (shadownet): <code>tezos:NetXsqzbfFenSTS</code> — <code>https://rpc.shadownet.teztnets.com</code></li>
-            <li class="check">Michelson interface (L2): <code>tezos:NetXH12Aer3be93</code> — <code>https://demo.txpark.nomadic-labs.com/rpc/tezlink</code></li>
+            <li class="check">Michelson interface (L2): <code>tezos:NetXY2oPPzkxUW1</code> — <code>https://demo.txpark.nomadic-labs.com/rpc/tezlink</code></li>
             <li class="check">EVM interface: <code>eip155:127124</code> — <code>https://demo.txpark.nomadic-labs.com/rpc</code></li>
           </ul>
         </div>
@@ -756,7 +756,7 @@
           </ul>
         </div>
       </div>
-      <div class="outcome"><strong>Done:</strong> L1 <code>curl https://rpc.shadownet.teztnets.com/chains/main/chain_id</code> → <code>"NetXsqzbfFenSTS"</code> ✓ &nbsp;|&nbsp; Michelson L2 <code>curl https://demo.txpark.nomadic-labs.com/rpc/tezlink/chains/main/chain_id</code> → <code>"NetXH12Aer3be93"</code> ✓ &nbsp;|&nbsp; Both chain IDs distinct — no blocker for any phase.</div>
+      <div class="outcome"><strong>Done:</strong> L1 <code>curl https://rpc.shadownet.teztnets.com/chains/main/chain_id</code> → <code>"NetXsqzbfFenSTS"</code> ✓ &nbsp;|&nbsp; Michelson L2 <code>curl https://demo.txpark.nomadic-labs.com/rpc/tezlink/chains/main/chain_id</code> → <code>"NetXY2oPPzkxUW1"</code> ✓ &nbsp;|&nbsp; Both chain IDs distinct — no blocker for any phase.</div>
     </div>
   </div>
 
@@ -863,7 +863,7 @@ client.<span class="fn">onOperationRequest</span>(<span class="kw">async</span> 
         <h4>Approach revised: from response-shape detection to <code>peer.version</code> routing</h4>
         <ul>
           <li>The original POC (validated by Phases 1–6 below) used response-shape detection: the dApp inspected <code>'accounts' in response</code> to decide v2 vs. v3. This worked but required wallets to add field-presence checks throughout their permission/operation/session-storage handlers — a leaky abstraction the proposal was meant to remove.</li>
-          <li>The revised approach (<a href="https://github.com/trilitech/tezos-x-octez-connect/blob/main/specs/002-peer-version-handshake/spec.md">spec 002</a>) bumps <code>BEACON_VERSION</code> from <code>'3'</code> to <code>'4'</code> and routes the wallet on a single <code>if (peer.version &gt;= 4)</code> branch at the permission-handler entry. The dApp SDK detects the mismatch when a wallet has not been upgraded and raises a structured <code>VersionUnsupportedBeaconError</code>. No new wire field; reference implementation in <a href="https://github.com/trilitech/tezos-x-octez-connect/blob/main/specs/002-peer-version-handshake/demo-branch.md"><code>octez.connect@feat/peer-version-handshake</code></a> commit <code>5e8d1adb</code>.</li>
+          <li>The revised approach (<a href="https://github.com/trilitech/tezos-x-octez-connect/blob/main/specs/002-peer-version-handshake/spec.md">spec 002</a>) bumps <code>BEACON_VERSION</code> from <code>'3'</code> to <code>'4'</code> and routes the wallet on a single <code>if (peer.version &gt;= 4)</code> branch at the permission-handler entry. The dApp SDK detects the mismatch when a wallet has not been upgraded and raises a structured <code>VersionUnsupportedBeaconError</code>. No new wire field; reference implementation on <a href="https://github.com/trilitech/octez.connect/tree/feat/peer-version-handshake"><code>octez.connect@feat/peer-version-handshake</code></a> (head <code>ac3194a1</code>).</li>
           <li>A 3-step handshake with <code>version_upgrade_request</code> was also considered (and rejected): a new message type would rely on a 5-second timeout to detect v2 wallets and surface as unhandled-promise-rejection on the dApp side. The <code>peer.version</code> routing is the third design and the one currently shipped.</li>
         </ul>
       </div>
@@ -901,7 +901,7 @@ client.<span class="fn">onOperationRequest</span>(<span class="kw">async</span> 
   <span class="prop">networks</span>: [
     { <span class="prop">type</span>: <span class="str">"custom"</span>, <span class="prop">name</span>: <span class="str">"Tezos L1"</span>, <span class="prop">chainId</span>: <span class="str">"tezos:NetXsqzbfFenSTS"</span>,
       <span class="prop">rpcUrl</span>: <span class="str">"https://rpc.shadownet.teztnets.com"</span> },
-    { <span class="prop">type</span>: <span class="str">"custom"</span>, <span class="prop">name</span>: <span class="str">"Michelson interface"</span>, <span class="prop">chainId</span>: <span class="str">"tezos:NetXH12Aer3be93"</span>,
+    { <span class="prop">type</span>: <span class="str">"custom"</span>, <span class="prop">name</span>: <span class="str">"Michelson interface"</span>, <span class="prop">chainId</span>: <span class="str">"tezos:NetXY2oPPzkxUW1"</span>,
       <span class="prop">rpcUrl</span>: <span class="str">"https://demo.txpark.nomadic-labs.com/rpc/tezlink"</span> }
   ],
   <span class="prop">scopes</span>: [<span class="str">"operation_request"</span>]
@@ -909,7 +909,7 @@ client.<span class="fn">onOperationRequest</span>(<span class="kw">async</span> 
 
 <span class="cm">// Response — upgraded wallet (peer.version='4', multi-network):</span>
 <span class="cm">// { version: "4", accounts: { "tezos:NetXsqzbfFenSTS": { publicKey: "edpk..." },</span>
-<span class="cm">//                             "tezos:NetXH12Aer3be93": { publicKey: "edpk..." } } }</span>
+<span class="cm">//                             "tezos:NetXY2oPPzkxUW1": { publicKey: "edpk..." } } }</span>
 <span class="cm">// Note: same publicKey for both chains — L1 and Michelson interface share the same Ed25519 key pair.</span>
 
 <span class="cm">// Response — unupgraded wallet (BEACON_VERSION still '3'):</span>
@@ -927,16 +927,16 @@ client.<span class="fn">onOperationRequest</span>(<span class="kw">async</span> 
 
 <span class="cm">// operation_request — network field required on the v4 path.</span>
 <span class="kw">await</span> dAppClient.<span class="fn">requestOperation</span>({
-  <span class="prop">network</span>: <span class="str">"tezos:NetXH12Aer3be93"</span>,  <span class="cm">// Michelson L2 — required on the v4 path.</span>
+  <span class="prop">network</span>: <span class="str">"tezos:NetXY2oPPzkxUW1"</span>,  <span class="cm">// Michelson L2 — required on the v4 path.</span>
   <span class="prop">operationDetails</span>: [...]
 });</code></pre>
       <div class="outcome"><strong>Phase done when:</strong> dApp sends two operations in the same session — one to L1 (shadownet), one to Michelson L2 (tezlink) — wallet routes each to the correct RPC, and an unpatched wallet still works with the old single-network flow.</div>
       <div class="e2e">
         <h4>E2E validation — <code>test/phase2.ts</code> ✅ passing</h4>
         <ol>
-          <li><strong>v3 session:</strong> <code>POST /request-permissions {networks:[L1, Michelson]}</code> → patched wallet responds with <code>accounts</code> map → <code>GET /last-permission</code> returns <code>{version:"2", accounts:{"tezos:NetXsqzbfFenSTS":{publicKey}, "tezos:NetXH12Aer3be93":{publicKey}}}</code> → <code>GET /last-handshake</code> returns <code>{mode:"v3"}</code>.</li>
+          <li><strong>v3 session:</strong> <code>POST /request-permissions {networks:[L1, Michelson]}</code> → patched wallet responds with <code>accounts</code> map → <code>GET /last-permission</code> returns <code>{version:"2", accounts:{"tezos:NetXsqzbfFenSTS":{publicKey}, "tezos:NetXY2oPPzkxUW1":{publicKey}}}</code> → <code>GET /last-handshake</code> returns <code>{mode:"v3"}</code>.</li>
           <li><strong>L1 routing:</strong> <code>POST /request-operation {network:"tezos:NetXsqzbfFenSTS", …}</code> → <code>GET /last-rpc-call</code> returns <code>{rpcUrl:"https://rpc.shadownet.teztnets.com"}</code> → <code>waitForConfirmation(hash, L1_RPC)</code> resolves (head polling fallback — <code>monitor/heads</code> not supported on shadownet).</li>
-          <li><strong>Michelson routing:</strong> <code>POST /request-operation {network:"tezos:NetXH12Aer3be93", …}</code> → <code>GET /last-rpc-call</code> returns <code>{rpcUrl:"https://demo.txpark.nomadic-labs.com/rpc/tezlink"}</code>. Wallet confirms via account counter (tezlink protocol never exposes ops in <code>blocks/{id}/operations/{pass}</code>) before responding.</li>
+          <li><strong>Michelson routing:</strong> <code>POST /request-operation {network:"tezos:NetXY2oPPzkxUW1", …}</code> → <code>GET /last-rpc-call</code> returns <code>{rpcUrl:"https://demo.txpark.nomadic-labs.com/rpc/tezlink"}</code>. Wallet confirms via account counter (tezlink protocol never exposes ops in <code>blocks/{id}/operations/{pass}</code>) before responding.</li>
           <li><strong>Subset approval:</strong> not tested in this phase — <code>HEADLESS_APPROVE_NETWORKS</code> flag not implemented. Deferred to a later phase or TZIP documentation.</li>
           <li><strong>Backward compat:</strong> <code>POST /set-mode {mode:"v2"}</code> switches the wallet to legacy behavior → <code>POST /request-permissions {networks:[L1, Michelson]}</code> → wallet ignores <code>networks[]</code>, responds with flat <code>{publicKey}</code> → dApp detects v2 mode → <code>GET /last-handshake</code> returns <code>{mode:"v2"}</code> → <code>POST /request-operation</code> without <code>network</code> routes to L1. <em>Note: implemented via runtime mode switch rather than a separate unpatched build.</em></li>
         </ol>
@@ -965,7 +965,7 @@ client.<span class="fn">onOperationRequest</span>(<span class="kw">async</span> 
         <ol>
           <li><code>test/phase2.ts</code> passes against shadownet (L1) and tezlink (Michelson L2) — no separate <code>test/phase3.ts</code> needed.</li>
           <li><code>requestOperation({ network: L1_CHAIN_ID, ... })</code> → <code>waitForConfirmation(hashL1, L1_RPC)</code> resolves via head polling (shadownet, <code>monitor/heads</code> not supported).</li>
-          <li><code>requestOperation({ network: "tezos:NetXH12Aer3be93", ... })</code> → confirmed on tezlink via account counter in the wallet before responding. The tezlink protocol does not expose operations in <code>blocks/{id}/operations/{pass}</code> — counter advance is the only inclusion signal.</li>
+          <li><code>requestOperation({ network: "tezos:NetXY2oPPzkxUW1", ... })</code> → confirmed on tezlink via account counter in the wallet before responding. The tezlink protocol does not expose operations in <code>blocks/{id}/operations/{pass}</code> — counter advance is the only inclusion signal.</li>
           <li><code>GET /last-rpc-call</code> returns correct <code>{ chainId, rpcUrl }</code> for each operation — distinct RPC endpoints confirmed.</li>
         </ol>
       </div>
@@ -1168,7 +1168,7 @@ client.<span class="fn">onOperationRequest</span>(<span class="kw">async</span> 
   },
   <span class="prop">optionalNamespaces</span>: {
     <span class="prop">tezos</span>: {
-      <span class="prop">chains</span>: [<span class="str">"tezos:NetXH12Aer3be93"</span>],  <span class="cm">// Michelson interface</span>
+      <span class="prop">chains</span>: [<span class="str">"tezos:NetXY2oPPzkxUW1"</span>],  <span class="cm">// Michelson interface</span>
       <span class="prop">methods</span>: [<span class="str">"tezos_getAccounts"</span>, <span class="str">"tezos_send"</span>, <span class="str">"tezos_sign"</span>],
       <span class="prop">events</span>: []
     }
@@ -1180,7 +1180,7 @@ client.<span class="fn">onOperationRequest</span>(<span class="kw">async</span> 
         <ol>
           <li>✓ Reown relay reachable (<code>relay.walletconnect.org/health</code> → 200)</li>
           <li>✓ <code>signClient.connect({requiredNamespaces: {tezos: [L1]}, optionalNamespaces: {tezos: [L2]}})</code> produces pairing URI; wallet auto-approves via <code>POST /wc2-pair</code></li>
-          <li>✓ <code>session.namespaces.tezos.chains</code> contains both <code>tezos:NetXsqzbfFenSTS</code> (L1) and <code>tezos:NetXH12Aer3be93</code> (Michelson interface)</li>
+          <li>✓ <code>session.namespaces.tezos.chains</code> contains both <code>tezos:NetXsqzbfFenSTS</code> (L1) and <code>tezos:NetXY2oPPzkxUW1</code> (Michelson interface)</li>
           <li>✓ <code>tezos_send</code> on L1 → <code>GET /last-rpc-call</code> returns L1 RPC → hash confirmed on-chain</li>
           <li>✓ <code>tezos_send</code> on Michelson → <code>GET /last-rpc-call</code> returns tezlink RPC → hash confirmed via counter advance</li>
         </ol>
@@ -1236,7 +1236,7 @@ client.<span class="fn">onOperationRequest</span>(<span class="kw">async</span> 
         <p style="font-size:.82rem; color:#10b981; margin-bottom:.5rem; font-weight:600;">npm run test:phase6 — 1 passed (2m20s)</p>
         <ol>
           <li><strong>✓</strong> Popup opened at <code>localhost:5174/?popup=1&amp;headless=1</code> — wallet detected <code>?popup=1 &amp;&amp; window.opener</code> and entered PostMessage mode.</li>
-          <li><strong>✓</strong> <code>wallet-ready</code> → <code>permission-request</code> → <code>permission-response</code> handshake via cross-origin PostMessage. dApp shows "Connected · popup · tezos:NetXsqzbfFenSTS, tezos:NetXH12Aer3be93".</li>
+          <li><strong>✓</strong> <code>wallet-ready</code> → <code>permission-request</code> → <code>permission-response</code> handshake via cross-origin PostMessage. dApp shows "Connected · popup · tezos:NetXsqzbfFenSTS, tezos:NetXY2oPPzkxUW1".</li>
           <li><strong>✓</strong> L1 transfer submitted and included (shadownet). Hash: <code>op64Cdeh…</code></li>
           <li><strong>✓</strong> L2 Michelson contract call submitted and included via counter-poll. Hash: <code>opFgG1Xu…</code></li>
           <li><strong>✓</strong> Popup remains open across both operations (<code>popupPage.isClosed() === false</code>).</li>
@@ -1304,7 +1304,7 @@ client.<span class="fn">onOperationRequest</span>(<span class="kw">async</span> 
 <span class="add">    networks: [
       { chainId: <span class="str">'tezos:NetXsqzbfFenSTS'</span>,
         rpcUrl: L1_RPC, name: <span class="str">'L1'</span> },
-      { chainId: <span class="str">'tezos:NetXH12Aer3be93'</span>,
+      { chainId: <span class="str">'tezos:NetXY2oPPzkxUW1'</span>,
         rpcUrl: L2_RPC,
         name: <span class="str">'Michelson interface'</span> },
     ],</span>
@@ -1342,7 +1342,7 @@ client.<span class="fn">onOperationRequest</span>(<span class="kw">async</span> 
         <pre><code><span class="cm">// Specify target chain alongside the op</span>
 <span class="kw">const</span> result = <span class="kw">await</span> client
   .<span class="fn">requestOperation</span>({
-<span class="add">    network: <span class="str">'tezos:NetXH12Aer3be93'</span>,  <span class="cm">// CAIP-2</span></span>
+<span class="add">    network: <span class="str">'tezos:NetXY2oPPzkxUW1'</span>,  <span class="cm">// CAIP-2</span></span>
     operationDetails: [
       { kind: <span class="str">'transaction'</span>,
         amount: <span class="str">'1'</span>,
@@ -1365,7 +1365,7 @@ client.<span class="fn">onOperationRequest</span>(<span class="kw">async</span> 
       <li>
         <div class="edge-title">Wallet only approves some chains (partial <code>accounts</code> map)</div>
         <div class="edge-body">The <code>accounts</code> map may not contain all requested chain IDs. Check before enabling each chain's operations:
-          <pre style="margin-top:.5rem;"><code><span class="kw">const</span> canUseL2 = !!v3Accounts?.[<span class="str">'tezos:NetXH12Aer3be93'</span>]
+          <pre style="margin-top:.5rem;"><code><span class="kw">const</span> canUseL2 = !!v3Accounts?.[<span class="str">'tezos:NetXY2oPPzkxUW1'</span>]
 btnL2.disabled = !canUseL2</code></pre>
         </div>
       </li>
@@ -1519,7 +1519,7 @@ btnL2.disabled = !canUseL2</code></pre>
         <div class="edge-title">Operation request for a chain not in the stored registry</div>
         <div class="edge-body">Use a hardcoded fallback for known chains, or return an <code>operation_error</code> for truly unknown ones. Don't crash silently.
           <pre style="margin-top:.5rem;"><code><span class="kw">function</span> <span class="fn">fallback</span>(chainId) {
-  <span class="kw">if</span> (chainId === <span class="str">'tezos:NetXH12Aer3be93'</span>) <span class="kw">return</span> MICHELSON_RPC
+  <span class="kw">if</span> (chainId === <span class="str">'tezos:NetXY2oPPzkxUW1'</span>) <span class="kw">return</span> MICHELSON_RPC
   <span class="kw">if</span> (chainId === <span class="str">'tezos:NetXsqzbfFenSTS'</span>)  <span class="kw">return</span> L1_RPC
   <span class="kw">throw new</span> <span class="fn">Error</span>(<span class="str">`Unknown chain: ${chainId}`</span>)
 }</code></pre>

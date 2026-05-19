@@ -102,7 +102,7 @@ import { MemoryStorage } from './storage'
 
 const PORT = parseInt(process.env.PORT ?? '5173')
 const L1_RPC = 'https://rpc.shadownet.teztnets.com'
-const L2_RPC = 'https://demo.txpark.nomadic-labs.com/rpc/tezlink'
+const L2_RPC = 'https://michelson.previewnet.tezosx.nomadic-labs.com'
 
 // ── State ──────────────────────────────────────────────────────────────────
 
@@ -113,6 +113,16 @@ let lastOp: { transactionHash: string } | null = null
 let lastHandshake: { mode: string } = { mode: 'v2' }
 
 // ── Client factory ─────────────────────────────────────────────────────────
+
+/**
+ * Spec 002-peer-version-handshake test-harness override.
+ * When set, the DAppClient is constructed with an explicit
+ * `requiredMinimumVersion`. Pinning it to '3' simulates a "legacy dApp"
+ * (it accepts wallets at peer.version='3'+); pinning it to '5'
+ * simulates the synthetic future-version test for US3.
+ */
+let testRequiredMinimumVersion: string | undefined =
+  process.env.REQUIRED_MIN_VERSION ?? undefined
 
 function createClient(): DAppClient {
   const client = new DAppClient({
@@ -131,6 +141,9 @@ function createClient(): DAppClient {
         'beacon-node-3.octez.io',
       ],
     },
+    ...(testRequiredMinimumVersion
+      ? ({ requiredMinimumVersion: testRequiredMinimumVersion } as any)
+      : {}),
   })
 
   // Capture pairing URI as soon as it is generated (before any modal would show)
@@ -270,6 +283,34 @@ app.get('/last-handshake', (_req, res) => {
 // GET /last-op
 app.get('/last-op', (_req, res) => {
   res.json(lastOp)
+})
+
+/**
+ * POST /test-config — spec 002-peer-version-handshake harness control.
+ *
+ * Body: { requiredMinimumVersion?: string | null }
+ *
+ * Sets the `requiredMinimumVersion` option that future `DAppClient`
+ * constructions will use. To apply, follow with `POST /reset` (which
+ * destroys and recreates the client). Pass `null` to clear the
+ * override and revert to the SDK default (= BEACON_VERSION).
+ */
+app.post('/test-config', (req, res) => {
+  const body = (req.body ?? {}) as any
+  if (body.requiredMinimumVersion === null || body.requiredMinimumVersion === undefined) {
+    testRequiredMinimumVersion = undefined
+  } else {
+    const v = String(body.requiredMinimumVersion)
+    if (!/^\d+$/.test(v)) {
+      res.status(400).json({ error: 'requiredMinimumVersion must be a decimal-integer string' })
+      return
+    }
+    testRequiredMinimumVersion = v
+  }
+  res.json({
+    requiredMinimumVersion: testRequiredMinimumVersion ?? null,
+    note: 'follow with POST /reset to recreate the DAppClient with the new option',
+  })
 })
 
 // POST /reset
