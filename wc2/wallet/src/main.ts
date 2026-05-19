@@ -337,10 +337,18 @@ async function main() {
 
   await client.connect(async (message) => {
     if (message.type === BeaconMessageType.PermissionRequest) {
-      const incomingNetworks: any[] = (message as any).networks ?? []
-      const isV3 = incomingNetworks.length > 0
+      // Spec 002-peer-version-handshake: single-branch routing on
+      // peer.version. message.version is the peer.version of the dApp's
+      // outgoing pairing payload. Upgraded dApps publish '4'; legacy
+      // dApps publish '3'. We do NOT inspect networks[] field-presence
+      // to decide routing — that's the leaky-abstraction the spec
+      // removes.
+      const peerVersion = Number((message as any).version ?? '0')
+      const isMultiNetwork =
+        Number.isFinite(peerVersion) && peerVersion >= 4
 
-      if (isV3) {
+      if (isMultiNetwork) {
+        const incomingNetworks: any[] = (message as any).networks ?? []
         // Build registry and show approval UI
         const nets = incomingNetworks.map((n: any) => ({
           chainId: n.chainId?.startsWith('tezos:') ? n.chainId : `tezos:${n.chainId ?? ''}`,

@@ -164,45 +164,47 @@ app.use(express.json())
 app.use((req, _res, next) => { console.log(`[dapp] ${req.method} ${req.path}`); next() })
 
 // POST /request-permissions
-// No body → v2 flow (Phase 1).
-// {networks:[...]} → single-step multi-chain (Phase 2).
+// No body → legacy single-network flow (Phase 1).
+// {networks:[...]} → multi-network flow (Phase 2), routed by peer.version='4'.
 // Returns 200 once the pairing URI is ready — does NOT wait for wallet approval.
 app.post('/request-permissions', async (req, res) => {
   pairingUri = null
   pairingUriWaiters = []
 
-  const { networks } = (req.body ?? {}) as { networks?: unknown[] }
+  const { networks } = (req.body ?? {}) as { networks?: any[] }
 
-  // Inject networks[] into the permission_request via makeRequest monkey-patch.
-  // The SDK rejects "network" in requestPermissions input but doesn't validate
-  // unknown fields on the outgoing message — so we patch makeRequest to add it.
-  let restoreOrigMakeRequest: (() => void) | null = null
-  if (networks?.length) {
-    const orig = (client as any).makeRequest.bind(client)
-    ;(client as any).makeRequest = function (req: any, ...args: any[]) {
-      if (req?.type === 'permission_request') req.networks = networks
-      return orig(req, ...args)
-    }
-    restoreOrigMakeRequest = () => { ;(client as any).makeRequest = orig }
-  }
-
-  // Start requestPermissions in background; capture result when wallet approves
-  _pendingPermission = (client.requestPermissions() as any)
+  // Spec 002-peer-version-handshake: the SDK accepts `networks` as a
+  // first-class option, stamps peer.version='4' automatically (via
+  // BEACON_VERSION), and the dApp-side SDK raises
+  // VersionUnsupportedBeaconError when the wallet hasn't been upgraded.
+  // No makeRequest monkey-patching needed.
+  _pendingPermission = (
+    client.requestPermissions(networks?.length ? { networks } : undefined) as any
+  )
     .then((perm: any) => {
-      restoreOrigMakeRequest?.()
       if (perm?.accounts && typeof perm.accounts === 'object') {
-        // v3 response: wallet echoed back accounts map
-        lastPermission = { version: '2', accounts: perm.accounts }
-        lastHandshake = { mode: 'v3' }
+        // Upgraded wallet served the multi-network shape.
+        lastPermission = { version: '4', accounts: perm.accounts }
+        lastHandshake = { mode: 'multi-network' }
       } else {
-        // v2 response: flat { publicKey, address }
-        lastPermission = { version: '2', publicKey: perm.publicKey, address: perm.address }
-        lastHandshake = { mode: 'v2' }
+        // Legacy single-network response (peer.version = '3', wallet
+        // ignored the networks[] option). Only possible if the dApp's
+        // requiredMinimumVersion is set <= '3'.
+        lastPermission = { version: '3', publicKey: perm.publicKey, address: perm.address }
+        lastHandshake = { mode: 'legacy' }
       }
     })
     .catch((err: any) => {
-      restoreOrigMakeRequest?.()
+      // VersionUnsupportedBeaconError lands here when the wallet hasn't
+      // been upgraded and the dApp's requiredMinimumVersion is '4'.
       console.error('[dapp] requestPermissions error:', err.message)
+      if (err?.errorCode === 'VERSION_UNSUPPORTED') {
+        lastHandshake = {
+          mode: 'version_unsupported',
+          requiredMinimumVersion: err.requiredMinimumVersion,
+          walletServedVersion: err.walletServedVersion,
+        }
+      }
     })
 
   // Wait until pairing URI is available before responding to test runner
@@ -221,13 +223,17 @@ app.get('/pairing-uri', (_req, res) => {
 
 // POST /request-operation
 // Body: { network?: string (CAIP-2), operationDetails: PartialTezosOperation[] }
-// network present → v3 routing (monkey-patch overrides SDK's activeAccount.network)
+// network present → multi-network routing on the upgraded wallet.
 app.post('/request-operation', async (req, res) => {
   try {
     const { operationDetails, network } = req.body
 
-    // SDK ignores input.network — always uses activeAccount.network.
-    // Patch makeRequest to override it for this call.
+    // The version-negotiation feature (spec 002) added a first-class
+    // `networks` option to requestPermissions, but `requestOperation`'s
+    // `network` (CAIP-2 string) is part of the multi-network protocol
+    // delta tracked separately. Until that SDK API lands, we attach
+    // the CAIP-2 string via a small makeRequest hook. The wallet's
+    // upgraded operation handler (peer.version >= '4' path) reads it.
     let restore: (() => void) | null = null
     if (network) {
       const orig = (client as any).makeRequest.bind(client)

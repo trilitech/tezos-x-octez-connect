@@ -16,7 +16,22 @@ This document specifies the minimal changes required to the [TZIP-10](https://gi
 1. **Chrome extension wallet** — injects into the page, uses the existing PostMessage channel
 2. **Standalone app wallet** — web app or mobile app; uses Matrix P2P pairing or a new popup transport
 
-The changes are **backward compatible**: a dApp that sends `networks[]` talks multi-chain to wallets that support it, and falls back gracefully to single-chain with wallets that don't.
+The changes are **backward compatible**: an upgraded wallet (one whose
+`BEACON_VERSION = '4'`) MUST continue to serve every previously-published
+`peer.version` (including `'3'` for today's deployed dApps); unupgraded
+wallets need no modification at all.
+
+> ⚠️ **Approach revised.** §2 and §3 below preserve the original POC's
+> code examples for historical context (they show `msg.networks ?? []`
+> field-presence checks). The **production contract is in §4**:
+> wallets route on `peer.version >= '4'` at a single entry point;
+> the dApp-side SDK detects unupgraded wallets via the wallet's
+> response `peer.version` and raises `VersionUnsupportedBeaconError`.
+> No new wire field is introduced. Reference SDK implementation:
+> [`octez.connect@feat/peer-version-handshake`](../specs/002-peer-version-handshake/demo-branch.md)
+> commit `5e8d1adb`. Implementers should follow §4 and treat §2/§3
+> code samples as **illustrations of the protocol-level payload
+> shapes only**, not as the recommended routing pattern.
 
 ---
 
@@ -433,29 +448,102 @@ async function initPopupMode(signer: Signer): Promise<void> {
 
 ## 4. Backward compatibility matrix
 
-| dApp sends `networks[]` | Wallet returns `accounts` | Behaviour |
-|-------------------------|---------------------------|-----------|
-| No | No | Standard TZIP-10 v2 — single chain, existing behaviour unchanged |
-| Yes | No | Wallet does not support multi-chain; dApp falls back to single-chain |
-| Yes | Yes | Multi-chain session — dApp uses `accounts` map for routing |
+**Routing key.** All matrix cells below are determined by the value of
+the existing `peer.version` field on each side's pairing/connect
+payload. This field is already on every Beacon message — no new
+version field is introduced by this protocol revision.
 
-Detection in the dApp (on `permission_response`):
+| dApp's `peer.version` | Wallet's served `peer.version` | Behaviour |
+|-----------------------|-------------------------------|-----------|
+| `'3'` (legacy single-chain dApp) | `'3'` (legacy wallet) | Standard TZIP-10 v2 — single chain, existing behaviour unchanged. |
+| `'3'` (legacy single-chain dApp) | `'4'` (upgraded wallet) | Wallet MUST serve at `'3'` — backward compat is mandatory, not policy. Existing dApps need no change. |
+| `'4'` (multi-chain dApp) | `'4'` (upgraded wallet) | Multi-chain session. Wallet reads `req.networks`; returns `accounts` map. |
+| `'4'` (multi-chain dApp) | `'3'` (unupgraded wallet) | Wallet behaves as legacy (no code change possible). dApp-side SDK detects the mismatch from `walletResponse.version` and raises `VersionUnsupportedBeaconError`. |
+
+### Conformance rules
+
+- **C1.** An upgraded wallet (any wallet whose `BEACON_VERSION = '4'`) MUST accept and serve sessions for every legal `peer.version` value `v` such that `v <= BEACON_VERSION`. Backward compatibility is mandatory.
+- **C2.** Wallets MUST NOT emit a wire-level `version_unsupported` rejection for any `peer.version` value received. If the value exceeds the wallet's own `BEACON_VERSION`, the wallet responds with `version = BEACON_VERSION` (its own served version) and the dApp SDK decides whether that is acceptable.
+- **C3.** A dApp SDK MUST stamp every outgoing pairing payload and message with its build-time `BEACON_VERSION`.
+- **C4.** Comparison MUST be numeric integer comparison (`Number(a) >= Number(b)`). String-lexicographic comparison is forbidden (would mis-order `'10'` vs `'4'` at future revisions).
+- **C5.** No participant may invent a sibling version-equivalent field (capabilities, protocolFlavor, tier, …) to bypass the `peer.version` routing key.
+
+### Detection on the dApp side
+
+The dApp configures a required-minimum at SDK construction; the SDK does the comparison and raises a structured error on mismatch.
+
 ```typescript
-if (response.accounts && typeof response.accounts === 'object') {
-  // v3 multi-chain session
-  const chains = Object.keys(response.accounts)
-} else {
-  // v2 single-chain session
-  const publicKey = response.publicKey
+import { DAppClient, VersionUnsupportedBeaconError } from '@tezos-x/octez.connect-dapp'
+
+const client = new DAppClient({
+  name: 'My multi-chain dApp',
+  // Default = SDK's BEACON_VERSION. Override to '3' for tolerance.
+  requiredMinimumVersion: '4',
+})
+
+try {
+  const response = await client.requestPermissions({ networks: [...] })
+  // peer.version >= '4' was served — response.accounts is the per-chain map.
+} catch (e) {
+  if (e instanceof VersionUnsupportedBeaconError) {
+    // walletServedVersion < requiredMinimumVersion
+    showWalletUpgradeBanner({
+      required: e.requiredMinimumVersion,   // e.g. '4'
+      served:   e.walletServedVersion,      // e.g. '3'
+      message:  e.message,
+    })
+  } else {
+    throw e
+  }
 }
 ```
+
+### Routing on the wallet side
+
+The wallet branches once at its incoming-request entry point.
+Downstream handlers MUST NOT re-check the version or do field-presence
+detection of v4-era fields.
+
+```typescript
+// In IncomingRequestInterceptor.intercept() — the single choke point.
+if (Number(peer.version) >= 4) {
+  return handleV4Message(req, peer)   // reads req.networks directly
+}
+if (peer.version === '2') return handleV2Message(req, peer)
+if (usesWrappedMessages(peer.version)) return handleV3Message(req, peer)
+```
+
+### Future versions
+
+The set of legal `peer.version` values is open-ended (`'5'`, `'6'`, …
+are reserved for future protocol revisions). Adding a new value
+requires (a) bumping `BEACON_VERSION` in `octez.connect-core/src/constants.ts`,
+(b) defining the message-shape delta in this guide, and (c) adding the
+corresponding branch in the wallet's single-routing entry. The dApp
+SDK's `requiredMinimumVersion` mechanism propagates automatically:
+SDKs built against `BEACON_VERSION = '5'` default to a minimum of
+`'5'` and raise `VersionUnsupportedBeaconError` against any wallet
+served at `'4'` or below.
+
+A future protocol revision MUST NOT introduce a new wire field to
+carry version information. The negotiation contract names
+`peer.version` as the sole identifier (see C5).
 
 ---
 
 ## 5. Reference implementation
 
-A working proof of concept is available at:
-**`trilitech/tezos-x-beacon`** — `wc2/wallet/src/main.ts` (browser wallet) and `wc2/dapp/src/main.ts` (dApp).
+**SDK changes.** The reference SDK implementation lives on the
+`feat/peer-version-handshake` branch of
+[`trilitech/octez.connect`](https://github.com/trilitech/octez.connect),
+at commit `5e8d1adbb6d7d15897d6706d72c57c083839d3aa`. See
+[`specs/002-peer-version-handshake/demo-branch.md`](../specs/002-peer-version-handshake/demo-branch.md)
+in this repo for reproduction steps. The branch contains three
+reviewable commits (foundational scaffolding + wallet single-branch
+routing + dApp-side detection).
+
+**Reference apps.** A working POC of the consuming side is in this
+repo at `wc2/wallet/src/main.ts` (browser wallet) and `wc2/dapp/src/main.ts` (dApp).
 
 Validated transports:
 

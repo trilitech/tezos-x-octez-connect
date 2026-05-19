@@ -229,10 +229,22 @@ async function main(): Promise<void> {
 
   await client.connect(async (message) => {
     if (message.type === BeaconMessageType.PermissionRequest) {
-      const incomingNetworks: any[] = (message as any).networks ?? []
+      // Spec 002-peer-version-handshake: single-branch routing on the
+      // peer.version that arrived with the message. v2Mode forces legacy
+      // behavior for end-to-end backward-compat tests. Otherwise:
+      //   peer.version >= '4' → multi-network handler (reads networks[])
+      //   peer.version <  '4' → legacy handler (single-network)
+      // No `networks ?? []` field-presence detection.
+      const peerVersion = Number((message as any).version ?? '0')
+      const isMultiNetwork =
+        !v2Mode && Number.isFinite(peerVersion) && peerVersion >= 4
 
-      if (incomingNetworks.length > 0 && !v2Mode) {
-        // v3 mode: respond with accounts map, one entry per approved chain
+      if (isMultiNetwork) {
+        // Multi-network handler — networks[] is guaranteed to be the
+        // mode-carrying field on the v4 path; treat its absence as a
+        // protocol error from the dApp side (still no field-presence
+        // version detection — we're past that point).
+        const incomingNetworks: any[] = (message as any).networks ?? []
         networkRegistry = {}
         const accounts: Record<string, { publicKey: string }> = {}
         for (const net of incomingNetworks) {
@@ -245,12 +257,12 @@ async function main(): Promise<void> {
           type: BeaconMessageType.PermissionResponse,
           id: message.id,
           publicKey,          // keep for SDK session establishment
-          accounts,           // v3 extension: multi-chain account map
+          accounts,           // multi-network account map, keyed by CAIP-2 chainId
           network: message.network,
           scopes: message.scopes ?? [PermissionScope.OPERATION_REQUEST],
         } as any)
       } else {
-        // v2 mode (legacy or V2_MODE=true)
+        // Legacy single-network handler. No networks[] inspection.
         await client.respond({
           type: BeaconMessageType.PermissionResponse,
           id: message.id,

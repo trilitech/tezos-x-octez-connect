@@ -90,28 +90,28 @@ btnConnect.addEventListener('click', async () => {
   client = makeClient()
 
   try {
-    // Monkey-patch makeRequest to inject networks[] into permission_request
-    const orig = (client as any).makeRequest.bind(client)
-    ;(client as any).makeRequest = function (req: any, ...args: any[]) {
-      if (req?.type === 'permission_request') {
-        req.networks = [
-          { chainId: L1_CHAIN, rpcUrl: L1_RPC, name: 'Shadownet L1' },
-          { chainId: L2_CHAIN, rpcUrl: L2_RPC, name: 'Michelson interface' },
-        ]
-      }
-      return orig(req, ...args)
-    }
+    // Spec 002-peer-version-handshake: the SDK now accepts `networks`
+    // as a first-class option on requestPermissions, and stamps
+    // peer.version = '4' on the outgoing payload automatically (via
+    // BEACON_VERSION). An upgraded wallet routes on peer.version >= 4
+    // and reads networks[] from the request; an unupgraded wallet
+    // causes the SDK to throw VersionUnsupportedBeaconError. No
+    // monkey-patching of makeRequest required.
+    const perm: any = await client.requestPermissions({
+      networks: [
+        { chainId: L1_CHAIN, rpcUrl: L1_RPC, name: 'Shadownet L1' },
+        { chainId: L2_CHAIN, rpcUrl: L2_RPC, name: 'Michelson interface' },
+      ],
+    })
 
-    const perm: any = await client.requestPermissions()
-    ;(client as any).makeRequest = orig  // restore
-
-    if (perm?.accounts && typeof perm.accounts === 'object') {
-      v3Accounts = perm.accounts
-      const chains = Object.keys(v3Accounts!).join(', ')
-      setConnState('connected', `<strong>Connected</strong> · v3 · ${chains}`)
+    // If we got here, peer.version >= the SDK's requiredMinimumVersion.
+    // The wallet's response carries `accounts` keyed by chainId.
+    v3Accounts = perm?.accounts ?? null
+    if (v3Accounts) {
+      const chains = Object.keys(v3Accounts).join(', ')
+      setConnState('connected', `<strong>Connected</strong> · multi-network · ${chains}`)
     } else {
-      v3Accounts = null
-      setConnState('connected', `<strong>Connected</strong> · v2 · ${perm?.publicKey?.slice(0, 12)}…`)
+      setConnState('connected', `<strong>Connected</strong> · ${perm?.publicKey?.slice(0, 12)}…`)
     }
 
     uriSection.style.display = 'none'
@@ -327,7 +327,12 @@ async function sendOp(
   setOpStatus(statusEl, 'pending', 'Waiting for signature…')
 
   try {
-    // Monkey-patch makeRequest to inject network CAIP-2 on operation_request
+    // The dApp tags the outgoing operation_request with its target chain
+    // (CAIP-2 string). With peer.version = '4' negotiated, the wallet's
+    // upgraded operation handler reads this field. Once the SDK adds a
+    // first-class `network` option on `requestOperation` (tracked separately
+    // — part of the multi-network protocol delta, not version negotiation),
+    // this small augmentation can be removed in favor of a clean call.
     const orig = (client as any).makeRequest.bind(client)
     ;(client as any).makeRequest = function (req: any, ...args: any[]) {
       if (req?.type === 'operation_request') req.network = chainId

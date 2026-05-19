@@ -408,7 +408,7 @@
     <div class="obj">
       <div class="obj-num">Objective 2</div>
       <h3>Protocol change demonstration</h3>
-      <p>Show the concrete delta to the Octez.connect (TZIP-10) protocol — optional <code>networks[]</code> on <code>permission_request</code> (response-shape detection, no new message type), explicit <code>network</code> routing on <code>operation_request</code> — and prove backward compatibility.</p>
+      <p>Show the concrete delta to the Octez.connect (TZIP-10) protocol — <code>peer.version</code> bumps from <code>'3'</code> to <code>'4'</code> as the single routing key, optional <code>networks[]</code> on <code>permission_request</code> on the v4 path, explicit <code>network</code> routing on <code>operation_request</code> — and prove backward compatibility (no new wire field, dApp-side rejection for unupgraded wallets). Reference SDK implementation: <a href="https://github.com/trilitech/tezos-x-octez-connect/blob/main/specs/002-peer-version-handshake/demo-branch.md"><code>octez.connect@feat/peer-version-handshake</code></a> commit <code>5e8d1adb</code>.</p>
     </div>
     <div class="obj">
       <div class="obj-num">Objective 3</div>
@@ -497,7 +497,7 @@
       <div class="phase-num">2</div>
       <div class="phase-row-meta">
         <h3>TZIP-10 protocol extension</h3>
-        <div class="tagline">Optional <code>networks[]</code> on permission_request, response-shape version detection, routing on operation_request</div>
+        <div class="tagline"><code>peer.version</code> bump to <code>'4'</code> (single routing key), <code>networks[]</code> on the v4 permission_request, CAIP-2 routing on operation_request</div>
         <div class="phase-tags">
           <span class="tag tag-matrix">Matrix P2P</span>
           <span class="tag tag-proto">TZIP-10 delta</span>
@@ -506,7 +506,7 @@
       <span class="phase-status st-done">Done</span>
     </div>
     <div class="phase-row-outcome">
-      <strong>Outcome:</strong> dApp sends two operations in one session — one to L1 (shadownet), one to Michelson L2 (tezlink) — wallet routes each to the correct RPC. Backward compatibility with unpatched wallet proven via response-shape detection (no timeout, no new message type).
+      <strong>Outcome:</strong> dApp sends two operations in one session — one to L1 (shadownet), one to Michelson L2 (tezlink) — wallet routes each to the correct RPC. Backward compatibility validated by the wallet's single-branch routing on <code>peer.version</code>: legacy (<code>'3'</code>) dApps land in the legacy handler unchanged; new (<code>'4'</code>) dApps land in the multi-network handler. No new wire field was introduced. (Note: this outcome was originally validated against an earlier "response-shape detection" approach; the revised peer-version approach is documented in <a href="https://github.com/trilitech/tezos-x-octez-connect/blob/main/specs/002-peer-version-handshake/spec.md">spec 002</a>.)
     </div>
   </div>
 
@@ -637,7 +637,7 @@
         <tbody>
           <tr>
             <td>POST /request-permissions</td>
-            <td>No body → v2 flow (Phase 1). <code>{networks:[…]}</code> → single-step multi-chain request; mode detected from response shape. Blocks until Matrix URI is ready.</td>
+            <td>No body → v3 (legacy) flow (Phase 1). <code>{networks:[…]}</code> → single-step multi-chain request; the dApp's outgoing <code>peer.version</code> is <code>'4'</code> via the bumped <code>BEACON_VERSION</code>; the wallet branches on <code>peer.version &gt;= 4</code>; the dApp SDK raises <code>VersionUnsupportedBeaconError</code> if the wallet served a lower version. Blocks until Matrix URI is ready.</td>
           </tr>
           <tr>
             <td>GET /pairing-uri</td>
@@ -833,7 +833,7 @@ client.<span class="fn">onOperationRequest</span>(<span class="kw">async</span> 
       <div class="phase-num">2</div>
       <div class="phase-meta">
         <h3>TZIP-10 protocol extension</h3>
-        <div class="tagline">Optional <code>networks[]</code> on permission_request, response-shape version detection, routing on operation_request</div>
+        <div class="tagline"><code>peer.version</code> bump to <code>'4'</code> (single routing key), <code>networks[]</code> on the v4 permission_request, CAIP-2 routing on operation_request</div>
         <div class="phase-tags">
           <span class="tag tag-matrix">Matrix P2P</span>
           <span class="tag tag-proto">TZIP-10 delta</span>
@@ -844,27 +844,27 @@ client.<span class="fn">onOperationRequest</span>(<span class="kw">async</span> 
     <div class="phase-body">
       <p style="font-size:.875rem; color:var(--text-dim); margin-top:1rem;">Core protocol change. Fork <code>@airgap/beacon-sdk</code> from day one — both dApp and wallet sides need changes, monkey-patching is too fragile. Both chain IDs and RPC endpoints are known from Phase 0, so Phase 2 uses real networks directly. Also delivered: a second unpatched wallet build at <code>WALLET_UNPATCHED_URL</code> for backward compat, and a <code>HEADLESS_APPROVE_NETWORKS</code> flag for subset-approval tests.</p>
 
-      <div class="sub-h">Version negotiation — single-step (response-shape detection)</div>
+      <div class="sub-h">Version negotiation — single-step, routed by <code>peer.version</code></div>
       <ul class="proto-steps">
         <li>
           <div class="step-num">1</div>
-          <div>dApp sends a standard <code>permission_request</code> with optional <code>networks[]</code> field. No new message type. The envelope is identical to TZIP-10 v2 — only one new field is added.</div>
+          <div>dApp sends a standard <code>permission_request</code>. The pairing payload carries <code>peer.version = '4'</code> (stamped from the bumped <code>BEACON_VERSION</code>). On the v4 path the request carries the optional <code>networks[]</code> field. No new message type, no new version-carrying field.</div>
         </li>
         <li>
           <div class="step-num">2</div>
-          <div>Wallet responds. <strong>v3-capable:</strong> response has <code>accounts: {"tezos:…": {publicKey}}</code> (one entry per approved chain) → v3 mode. <strong>Legacy v2:</strong> response has <code>publicKey: "edpk…"</code> → v2 mode. No timeout, no race condition.</div>
+          <div>Wallet branches once on <code>peer.version &gt;= '4'</code>. <strong>Upgraded wallet:</strong> reads <code>req.networks</code> directly, responds with <code>peer.version: '4'</code> + <code>accounts: {"tezos:…": {publicKey}}</code> per approved chain. <strong>Unupgraded wallet:</strong> behaves exactly as it always did, responding with its own <code>peer.version: '3'</code>.</div>
         </li>
         <li>
           <div class="step-num">3</div>
-          <div>dApp reads response shape to set mode. In v3 mode, subsequent <code>operation_request</code> messages carry <code>network: CAIP-2</code>. In v2 legacy mode, omit <code>network</code>.</div>
+          <div>dApp SDK compares <code>walletResponse.version</code> against <code>requiredMinimumVersion</code>. If the wallet served below the minimum, the SDK rejects <code>requestPermissions()</code> with a structured <code>VersionUnsupportedBeaconError</code> carrying both versions and a clear message. Otherwise the session proceeds at the served version. Subsequent <code>operation_request</code> messages carry <code>network: CAIP-2</code> on the v4 path.</div>
         </li>
       </ul>
       <div class="spike" style="margin-top:.75rem;">
-        <h4>Why not a 3-step handshake with version_upgrade_request?</h4>
+        <h4>Approach revised: from response-shape detection to <code>peer.version</code> routing</h4>
         <ul>
-          <li><strong>SDK inspection confirmed:</strong> unknown fields on <code>permission_request</code> pass through silently (no Zod/AJV, plain cast). Unknown message <em>types</em> hit <code>assertNever()</code> → unhandled promise rejection (no SDK event). A new message type would rely on a 5-second timeout to detect v2 wallets — fragile and slow.</li>
-          <li>Response-shape detection is instantaneous, deterministic, and adds no round trips. This is the standard protocol extension pattern (Postel's law).</li>
-          <li>The 3-step design is documented here as context; it was the initial approach before SDK behavior was confirmed.</li>
+          <li>The original POC (validated by Phases 1–6 below) used response-shape detection: the dApp inspected <code>'accounts' in response</code> to decide v2 vs. v3. This worked but required wallets to add field-presence checks throughout their permission/operation/session-storage handlers — a leaky abstraction the proposal was meant to remove.</li>
+          <li>The revised approach (<a href="https://github.com/trilitech/tezos-x-octez-connect/blob/main/specs/002-peer-version-handshake/spec.md">spec 002</a>) bumps <code>BEACON_VERSION</code> from <code>'3'</code> to <code>'4'</code> and routes the wallet on a single <code>if (peer.version &gt;= 4)</code> branch at the permission-handler entry. The dApp SDK detects the mismatch when a wallet has not been upgraded and raises a structured <code>VersionUnsupportedBeaconError</code>. No new wire field; reference implementation in <a href="https://github.com/trilitech/tezos-x-octez-connect/blob/main/specs/002-peer-version-handshake/demo-branch.md"><code>octez.connect@feat/peer-version-handshake</code></a> commit <code>5e8d1adb</code>.</li>
+          <li>A 3-step handshake with <code>version_upgrade_request</code> was also considered (and rejected): a new message type would rely on a 5-second timeout to detect v2 wallets and surface as unhandled-promise-rejection on the dApp side. The <code>peer.version</code> routing is the third design and the one currently shipped.</li>
         </ul>
       </div>
 
@@ -894,10 +894,10 @@ client.<span class="fn">onOperationRequest</span>(<span class="kw">async</span> 
           </ul>
         </div>
       </div>
-      <pre><code><span class="cm">// permission_request — single step. networks[] is a new optional field; v2 wallets silently ignore it.</span>
+      <pre><code><span class="cm">// permission_request — peer.version='4' is stamped from BEACON_VERSION by the SDK.</span>
+<span class="cm">// networks[] is read by the wallet only on the v4 path.</span>
 {
-  <span class="prop">type</span>: <span class="str">"permission_request"</span>, <span class="prop">version</span>: <span class="str">"2"</span>,
-  <span class="prop">network</span>: { <span class="prop">type</span>: <span class="str">"custom"</span>, <span class="prop">chainId</span>: <span class="str">"tezos:NetXsqzbfFenSTS"</span> }, <span class="cm">// kept for v2 parse compat</span>
+  <span class="prop">type</span>: <span class="str">"permission_request"</span>, <span class="prop">version</span>: <span class="str">"4"</span>,
   <span class="prop">networks</span>: [
     { <span class="prop">type</span>: <span class="str">"custom"</span>, <span class="prop">name</span>: <span class="str">"Tezos L1"</span>, <span class="prop">chainId</span>: <span class="str">"tezos:NetXsqzbfFenSTS"</span>,
       <span class="prop">rpcUrl</span>: <span class="str">"https://rpc.shadownet.teztnets.com"</span> },
@@ -907,20 +907,27 @@ client.<span class="fn">onOperationRequest</span>(<span class="kw">async</span> 
   <span class="prop">scopes</span>: [<span class="str">"operation_request"</span>]
 }
 
-<span class="cm">// Response — v3 wallet (networks[] understood):</span>
-<span class="cm">// { version: "2", accounts: { "tezos:NetXsqzbfFenSTS": { publicKey: "edpk..." },</span>
+<span class="cm">// Response — upgraded wallet (peer.version='4', multi-network):</span>
+<span class="cm">// { version: "4", accounts: { "tezos:NetXsqzbfFenSTS": { publicKey: "edpk..." },</span>
 <span class="cm">//                             "tezos:NetXH12Aer3be93": { publicKey: "edpk..." } } }</span>
 <span class="cm">// Note: same publicKey for both chains — L1 and Michelson interface share the same Ed25519 key pair.</span>
 
-<span class="cm">// Response — legacy v2 wallet (networks[] silently ignored):</span>
-<span class="cm">// { version: "2", publicKey: "edpk..." }   ← flat shape, no accounts map → dApp detects v2 mode</span>
+<span class="cm">// Response — unupgraded wallet (BEACON_VERSION still '3'):</span>
+<span class="cm">// { version: "3", publicKey: "edpk..." }   ← wallet behaves as it always did; no code change possible.</span>
 
-<span class="cm">// dApp reads response shape to determine mode:</span>
-<span class="kw">const</span> <span class="prop">mode</span> = <span class="str">'accounts'</span> <span class="kw">in</span> response ? <span class="str">'v3'</span> : <span class="str">'v2'</span>;
+<span class="cm">// dApp SDK does the comparison — wraps the requestPermissions call in try/catch.</span>
+<span class="kw">try</span> {
+  <span class="kw">const</span> response = <span class="kw">await</span> dAppClient.<span class="fn">requestPermissions</span>({ networks: [...] });
+  <span class="cm">// peer.version &gt;= '4' was served — response.accounts is the per-chain map.</span>
+} <span class="kw">catch</span> (e) {
+  <span class="kw">if</span> (e <span class="kw">instanceof</span> VersionUnsupportedBeaconError) {
+    <span class="cm">// e.requiredMinimumVersion, e.walletServedVersion populated — show upgrade banner.</span>
+  } <span class="kw">else</span> <span class="kw">throw</span> e;
+}
 
-<span class="cm">// operation_request — network field required in v3 mode, omitted in v2 legacy</span>
+<span class="cm">// operation_request — network field required on the v4 path.</span>
 <span class="kw">await</span> dAppClient.<span class="fn">requestOperation</span>({
-  <span class="prop">network</span>: <span class="str">"tezos:NetXH12Aer3be93"</span>,  <span class="cm">// Michelson L2 — required in v3; v2 wallets must ignore unknown fields</span>
+  <span class="prop">network</span>: <span class="str">"tezos:NetXH12Aer3be93"</span>,  <span class="cm">// Michelson L2 — required on the v4 path.</span>
   <span class="prop">operationDetails</span>: [...]
 });</code></pre>
       <div class="outcome"><strong>Phase done when:</strong> dApp sends two operations in the same session — one to L1 (shadownet), one to Michelson L2 (tezlink) — wallet routes each to the correct RPC, and an unpatched wallet still works with the old single-network flow.</div>
