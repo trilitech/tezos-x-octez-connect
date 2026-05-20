@@ -9,7 +9,11 @@
     "test:phase1": "tsx test/phase1.ts",
     "test:phase2": "tsx test/phase2.ts",
     "test:phase5": "tsx test/phase5.ts",
-    "test:phase6": "playwright test test/phase6.ts"
+    "test:phase6": "playwright test test/phase6.ts",
+    "test:pv-wallet-matrix": "tsx test/phase-version-negotiation/wallet-routing-matrix-p2p.ts && tsx test/phase-version-negotiation/wallet-routing-matrix-walletconnect.ts && playwright test test/phase-version-negotiation/wallet-routing-matrix-postmessage.spec.ts",
+    "test:pv-dapp-matrix": "tsx test/phase-version-negotiation/dapp-detection-matrix-p2p.ts && tsx test/phase-version-negotiation/dapp-detection-matrix-walletconnect.ts && playwright test test/phase-version-negotiation/dapp-detection-matrix-postmessage.spec.ts",
+    "test:pv-forward": "tsx test/phase-version-negotiation/forward-extensibility-matrix-p2p.ts && tsx test/phase-version-negotiation/forward-extensibility-matrix-walletconnect.ts && playwright test test/phase-version-negotiation/forward-extensibility-matrix-postmessage.spec.ts",
+    "test:pv-all": "npm run test:pv-wallet-matrix && npm run test:pv-dapp-matrix && npm run test:pv-forward"
   },
   "devDependencies": {
     "@playwright/test": "^1.59.1",
@@ -19,5 +23,16 @@
   "dependencies": {
     "@walletconnect/sign-client": "^2.23.9",
     "fake-indexeddb": "^6.2.5"
+  },
+  "overrides": {
+    "@tezos-x/octez.connect-core": "file:/home/ubuntu/projects/tezos-x-octez-connect/octez.connect/packages/octez.connect-core",
+    "@tezos-x/octez.connect-dapp": "file:/home/ubuntu/projects/tezos-x-octez-connect/octez.connect/packages/octez.connect-dapp",
+    "@tezos-x/octez.connect-wallet": "file:/home/ubuntu/projects/tezos-x-octez-connect/octez.connect/packages/octez.connect-wallet",
+    "@tezos-x/octez.connect-types": "file:/home/ubuntu/projects/tezos-x-octez-connect/octez.connect/packages/octez.connect-types",
+    "@tezos-x/octez.connect-utils": "file:/home/ubuntu/projects/tezos-x-octez-connect/octez.connect/packages/octez.connect-utils",
+    "@tezos-x/octez.connect-transport-matrix": "file:/home/ubuntu/projects/tezos-x-octez-connect/octez.connect/packages/octez.connect-transport-matrix",
+    "@tezos-x/octez.connect-transport-postmessage": "file:/home/ubuntu/projects/tezos-x-octez-connect/octez.connect/packages/octez.connect-transport-postmessage",
+    "@tezos-x/octez.connect-transport-walletconnect": "file:/home/ubuntu/projects/tezos-x-octez-connect/octez.connect/packages/octez.connect-transport-walletconnect",
+    "@tezos-x/octez.connect-ui": "file:/home/ubuntu/projects/tezos-x-octez-connect/octez.connect/packages/octez.connect-ui"
   }
 }

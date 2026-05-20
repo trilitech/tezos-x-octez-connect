@@ -102,7 +102,7 @@ import { MemoryStorage } from './storage'
 
 const PORT = parseInt(process.env.PORT ?? '5173')
 const L1_RPC = 'https://rpc.shadownet.teztnets.com'
-const L2_RPC = 'https://demo.txpark.nomadic-labs.com/rpc/tezlink'
+const L2_RPC = 'https://michelson.previewnet.tezosx.nomadic-labs.com'
 
 // ── State ──────────────────────────────────────────────────────────────────
 
@@ -110,9 +110,19 @@ let pairingUri: string | null = null
 let pairingUriWaiters: Array<() => void> = []
 let lastPermission: unknown = null
 let lastOp: { transactionHash: string } | null = null
-let lastHandshake: { mode: string } = { mode: 'v2' }
+let lastHandshake: { mode: string; [k: string]: any } = { mode: 'pending' }
 
 // ── Client factory ─────────────────────────────────────────────────────────
+
+/**
+ * Spec 002-peer-version-handshake test-harness override.
+ * When set, the DAppClient is constructed with an explicit
+ * `requiredMinimumVersion`. Pinning it to '3' simulates a "legacy dApp"
+ * (it accepts wallets at peer.version='3'+); pinning it to '5'
+ * simulates the synthetic future-version test for US3.
+ */
+let testRequiredMinimumVersion: string | undefined =
+  process.env.REQUIRED_MIN_VERSION ?? undefined
 
 function createClient(): DAppClient {
   const client = new DAppClient({
@@ -131,6 +141,9 @@ function createClient(): DAppClient {
         'beacon-node-3.octez.io',
       ],
     },
+    ...(testRequiredMinimumVersion
+      ? ({ requiredMinimumVersion: testRequiredMinimumVersion } as any)
+      : {}),
   })
 
   // Capture pairing URI as soon as it is generated (before any modal would show)
@@ -164,45 +177,61 @@ app.use(express.json())
 app.use((req, _res, next) => { console.log(`[dapp] ${req.method} ${req.path}`); next() })
 
 // POST /request-permissions
-// No body → v2 flow (Phase 1).
-// {networks:[...]} → single-step multi-chain (Phase 2).
+// No body → legacy single-network flow (Phase 1).
+// {networks:[...]} → multi-network flow (Phase 2), routed by peer.version='4'.
 // Returns 200 once the pairing URI is ready — does NOT wait for wallet approval.
 app.post('/request-permissions', async (req, res) => {
   pairingUri = null
   pairingUriWaiters = []
 
-  const { networks } = (req.body ?? {}) as { networks?: unknown[] }
+  const { networks } = (req.body ?? {}) as { networks?: any[] }
 
-  // Inject networks[] into the permission_request via makeRequest monkey-patch.
-  // The SDK rejects "network" in requestPermissions input but doesn't validate
-  // unknown fields on the outgoing message — so we patch makeRequest to add it.
-  let restoreOrigMakeRequest: (() => void) | null = null
-  if (networks?.length) {
-    const orig = (client as any).makeRequest.bind(client)
-    ;(client as any).makeRequest = function (req: any, ...args: any[]) {
-      if (req?.type === 'permission_request') req.networks = networks
-      return orig(req, ...args)
-    }
-    restoreOrigMakeRequest = () => { ;(client as any).makeRequest = orig }
-  }
+  // Spec 002-peer-version-handshake: the SDK accepts `networks` as a
+  // first-class option, stamps peer.version='4' automatically (via
+  // BEACON_VERSION), and the dApp-side SDK raises
+  // VersionUnsupportedBeaconError when the wallet hasn't been upgraded.
+  // No makeRequest monkey-patching needed.
+  _pendingPermission = (
+    client.requestPermissions(networks?.length ? { networks } : undefined) as any
+  )
+    .then(async (perm: any) => {
+      // Look up the wallet's served peer.version from the SDK's PeerManager
+      // for inclusion in last-handshake (the spec 002 negotiation outcome).
+      let walletServedVersion: string | undefined
+      try {
+        const walletPeer = await (client as any).getPeer?.()
+        walletServedVersion = (walletPeer as any)?.version
+      } catch (_e) {}
 
-  // Start requestPermissions in background; capture result when wallet approves
-  _pendingPermission = (client.requestPermissions() as any)
-    .then((perm: any) => {
-      restoreOrigMakeRequest?.()
       if (perm?.accounts && typeof perm.accounts === 'object') {
-        // v3 response: wallet echoed back accounts map
-        lastPermission = { version: '2', accounts: perm.accounts }
-        lastHandshake = { mode: 'v3' }
+        // Upgraded wallet served the multi-network shape.
+        lastPermission = { version: walletServedVersion ?? '4', accounts: perm.accounts }
+        lastHandshake = {
+          mode: 'multi-network',
+          walletServedVersion: walletServedVersion ?? '4',
+        }
       } else {
-        // v2 response: flat { publicKey, address }
-        lastPermission = { version: '2', publicKey: perm.publicKey, address: perm.address }
-        lastHandshake = { mode: 'v2' }
+        // Legacy single-network response (peer.version = '3', wallet
+        // ignored the networks[] option). Only possible if the dApp's
+        // requiredMinimumVersion is set <= '3'.
+        lastPermission = { version: walletServedVersion ?? '3', publicKey: perm.publicKey, address: perm.address }
+        lastHandshake = {
+          mode: 'legacy',
+          walletServedVersion: walletServedVersion ?? '3',
+        }
       }
     })
     .catch((err: any) => {
-      restoreOrigMakeRequest?.()
+      // VersionUnsupportedBeaconError lands here when the wallet hasn't
+      // been upgraded and the dApp's requiredMinimumVersion is '4'.
       console.error('[dapp] requestPermissions error:', err.message)
+      if (err?.errorCode === 'VERSION_UNSUPPORTED') {
+        lastHandshake = {
+          mode: 'version_unsupported',
+          requiredMinimumVersion: err.requiredMinimumVersion,
+          walletServedVersion: err.walletServedVersion,
+        }
+      }
     })
 
   // Wait until pairing URI is available before responding to test runner
@@ -221,13 +250,17 @@ app.get('/pairing-uri', (_req, res) => {
 
 // POST /request-operation
 // Body: { network?: string (CAIP-2), operationDetails: PartialTezosOperation[] }
-// network present → v3 routing (monkey-patch overrides SDK's activeAccount.network)
+// network present → multi-network routing on the upgraded wallet.
 app.post('/request-operation', async (req, res) => {
   try {
     const { operationDetails, network } = req.body
 
-    // SDK ignores input.network — always uses activeAccount.network.
-    // Patch makeRequest to override it for this call.
+    // The version-negotiation feature (spec 002) added a first-class
+    // `networks` option to requestPermissions, but `requestOperation`'s
+    // `network` (CAIP-2 string) is part of the multi-network protocol
+    // delta tracked separately. Until that SDK API lands, we attach
+    // the CAIP-2 string via a small makeRequest hook. The wallet's
+    // upgraded operation handler (peer.version >= '4' path) reads it.
     let restore: (() => void) | null = null
     if (network) {
       const orig = (client as any).makeRequest.bind(client)
@@ -266,13 +299,41 @@ app.get('/last-op', (_req, res) => {
   res.json(lastOp)
 })
 
+/**
+ * POST /test-config — spec 002-peer-version-handshake harness control.
+ *
+ * Body: { requiredMinimumVersion?: string | null }
+ *
+ * Sets the `requiredMinimumVersion` option that future `DAppClient`
+ * constructions will use. To apply, follow with `POST /reset` (which
+ * destroys and recreates the client). Pass `null` to clear the
+ * override and revert to the SDK default (= BEACON_VERSION).
+ */
+app.post('/test-config', (req, res) => {
+  const body = (req.body ?? {}) as any
+  if (body.requiredMinimumVersion === null || body.requiredMinimumVersion === undefined) {
+    testRequiredMinimumVersion = undefined
+  } else {
+    const v = String(body.requiredMinimumVersion)
+    if (!/^\d+$/.test(v)) {
+      res.status(400).json({ error: 'requiredMinimumVersion must be a decimal-integer string' })
+      return
+    }
+    testRequiredMinimumVersion = v
+  }
+  res.json({
+    requiredMinimumVersion: testRequiredMinimumVersion ?? null,
+    note: 'follow with POST /reset to recreate the DAppClient with the new option',
+  })
+})
+
 // POST /reset
 app.post('/reset', async (_req, res) => {
   pairingUri = null
   pairingUriWaiters = []
   lastPermission = null
   lastOp = null
-  lastHandshake = { mode: 'v2' }
+  lastHandshake = { mode: 'pending' }
   _pendingPermission = null
   // WalletConnectCommunicationClient is a static singleton shared across all DAppClient
   // instances. Close its SignClient (stops the relay connection) and reset the singleton
@@ -303,8 +364,26 @@ app.post('/reset', async (_req, res) => {
   try {
     await new WCStorage().resetState()
   } catch (_e) {}
-  client = createClient()
-  res.sendStatus(200)
+  try {
+    client = createClient()
+    lastHandshake = { mode: 'pending' }
+    res.sendStatus(200)
+  } catch (err: any) {
+    // createClient() throws when requiredMinimumVersion > BEACON_VERSION
+    // (spec 002, InvalidRequiredMinimumVersionError). Record the
+    // construction error in last-handshake so test scaffolds can see
+    // it, and reply 200 — the test asserts on the error structure,
+    // not on a 500 status.
+    lastHandshake = {
+      mode: 'construction_error',
+      errorCode: err?.errorCode ?? 'CONSTRUCTION_FAILED',
+      requiredMinimumVersion: err?.providedValue,
+      sdkBeaconVersion: err?.sdkBeaconVersion,
+      message: err?.message,
+    }
+    console.error('[dapp] createClient error:', err.message)
+    res.sendStatus(200)
+  }
 })
 
 app.listen(PORT, () => console.log(`[dapp] listening on :${PORT}`))

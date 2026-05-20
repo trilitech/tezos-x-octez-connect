@@ -4,7 +4,7 @@ Proof of concept for extending Octez.connect (TZIP-10) to support single-session
 
 ## Status
 
-All six phases validated and done. The POC demonstrates a full multi-chain session (permission + L1 transfer + L2 contract call) via both WalletConnect (Phase 5) and tzip10-popup PostMessage transport (Phase 6). All derisking objectives have been met.
+All six phases of the original POC are validated and done. The protocol-version mechanism was subsequently revised — the multi-chain protocol is now routed by the existing `peer.version` field (bumped from `'3'` to `'4'`) rather than by response-shape detection. See [`specs/002-peer-version-handshake/`](specs/002-peer-version-handshake/) for the spec, plan, and contracts, and the [`feat/peer-version-handshake`](https://github.com/trilitech/octez.connect/tree/feat/peer-version-handshake) branch of `trilitech/octez.connect` (head `ac3194a1`) for the reference SDK implementation.
 
 ## Documents
 
@@ -13,19 +13,26 @@ All six phases validated and done. The POC demonstrates a full multi-chain sessi
 | [Proposal](https://trilitech.github.io/tezos-x-octez-connect/) | TZIP-10 extension for multi-chain sessions — problem, proposal, integration, demo |
 | [PoC planning and execution](https://trilitech.github.io/tezos-x-octez-connect/poc-plan.html) | Phase-by-phase plan, technical details, and test infrastructure |
 | [Wallet integration guide](docs/wallet-multichain-integration.md) | How to extend a Chrome extension or standalone wallet for multi-chain TZIP-10 |
+| [Peer-version handshake spec](specs/002-peer-version-handshake/spec.md) | Revised approach: route by `peer.version` (no new field). Supersedes `specs/001-version-negotiation/`. |
+| [Demo branch pointer](specs/002-peer-version-handshake/demo-branch.md) | Commit id and reproduction steps for the reference SDK changes on `octez.connect@feat/peer-version-handshake`. |
 
 ## Repo structure
 
 ```
 wc2/
-  dapp/       dApp (Vite, port 5173) — multi-chain session demo
-  wallet/     Browser wallet (Vite, port 5174) — headless + interactive modes
+  dapp/         dApp (Vite, port 5173) — multi-chain session demo
+  wallet/       Browser wallet (Vite, port 5174) — headless + interactive modes
 test/
-  phase5.ts   WalletConnect multi-chain session (tsx)
-  phase6.ts   Popup transport multi-chain session (Playwright)
+  phase5.ts     WalletConnect multi-chain session (tsx)
+  phase6.ts     Popup transport multi-chain session (Playwright)
 docs/
   wallet-multichain-integration.md
-plan.html     Full development plan (GitHub Pages)
+specs/
+  002-peer-version-handshake/  Active spec: peer.version-based routing
+plan.html       Full development plan (GitHub Pages)
+octez.connect/  Local clone of trilitech/octez.connect (gitignored). The
+                feat/peer-version-handshake branch in this clone contains
+                the reference SDK implementation of spec 002.
 ```
 
 ## Running the tests

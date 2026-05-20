@@ -10,7 +10,7 @@ import { InMemorySigner } from '@taquito/signer'
 
 const WALLET_KEY = 'edsk3QoqBuvdamxouPhin7swCvkQNgq4jP5KZPbwWNnwdZpSpJiEbq'
 const L1_RPC     = 'https://rpc.shadownet.teztnets.com'
-const L2_RPC     = 'https://demo.txpark.nomadic-labs.com/rpc/tezlink'
+const L2_RPC     = 'https://michelson.previewnet.tezosx.nomadic-labs.com'
 
 // ── DOM refs ──────────────────────────────────────────────────────────────────
 const accountAddr    = document.getElementById('account-addr')!
@@ -158,7 +158,7 @@ async function executeOp(
 ): Promise<string> {
   const tezos = new TezosToolkit(rpcUrl)
   tezos.setSignerProvider(signer)
-  const isL2 = rpcUrl.includes('txpark') || rpcUrl.includes('tezlink')
+  const isL2 = rpcUrl.includes('txpark') || rpcUrl.includes('tezlink') || rpcUrl.includes('michelson.previewnet.tezosx')
 
   if (isL2) {
     const estimates = await tezos.estimate.batch(ops)
@@ -335,12 +335,31 @@ async function main() {
     }
   })
 
-  await client.connect(async (message) => {
-    if (message.type === BeaconMessageType.PermissionRequest) {
-      const incomingNetworks: any[] = (message as any).networks ?? []
-      const isV3 = incomingNetworks.length > 0
+  // Spec 002-peer-version-handshake harness control via URL parameter.
+  // ?overrideOutgoingVersion=3 simulates an unupgraded wallet by mutating
+  // the incoming request's version BEFORE the SDK's OutgoingResponseInterceptor
+  // mirrors it onto the response. Test-only.
+  const overrideOutgoingVersion =
+    new URLSearchParams(location.search).get('overrideOutgoingVersion')
 
-      if (isV3) {
+  await client.connect(async (message) => {
+    if (overrideOutgoingVersion) {
+      ;(message as any).version = overrideOutgoingVersion
+    }
+
+    if (message.type === BeaconMessageType.PermissionRequest) {
+      // Spec 002-peer-version-handshake: single-branch routing on
+      // peer.version. message.version is the peer.version of the dApp's
+      // outgoing pairing payload. Upgraded dApps publish '4'; legacy
+      // dApps publish '3'. We do NOT inspect networks[] field-presence
+      // to decide routing — that's the leaky-abstraction the spec
+      // removes.
+      const peerVersion = Number((message as any).version ?? '0')
+      const isMultiNetwork =
+        Number.isFinite(peerVersion) && peerVersion >= 4
+
+      if (isMultiNetwork) {
+        const incomingNetworks: any[] = (message as any).networks ?? []
         // Build registry and show approval UI
         const nets = incomingNetworks.map((n: any) => ({
           chainId: n.chainId?.startsWith('tezos:') ? n.chainId : `tezos:${n.chainId ?? ''}`,

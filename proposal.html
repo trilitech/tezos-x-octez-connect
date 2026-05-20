@@ -274,13 +274,14 @@
 
     <div class="proposal-box">
       <div class="label">Proposal</div>
-      <h2>Three small, backward-compatible additions to TZIP-10</h2>
+      <h2>Payload additions, routed by an explicit protocol version</h2>
       <ul>
-        <li><code>permission_request</code> gains an optional <code>networks[]</code> field — the list of chains the dApp wants access to.</li>
-        <li><code>permission_response</code> gains an optional <code>accounts</code> map — public key per chain.</li>
+        <li><code>peer.version</code> — the version field already on every TZIP-10 pairing payload — bumps from <code>"3"</code> to <code>"4"</code>. This is the single value wallets and dApps use to distinguish the multi-chain protocol from the legacy single-chain one.</li>
+        <li><code>permission_request</code> gains an optional <code>networks[]</code> field — the list of chains the dApp wants access to. Read only on the <code>peer.version &gt;= "4"</code> path.</li>
+        <li><code>permission_response</code> gains an optional <code>accounts</code> map — public key per chain. Same gating.</li>
         <li><code>operation_request.network</code> accepts a bare CAIP-2 string (<code>tezos:&lt;chain-id-b58&gt;</code>) so each operation is unambiguously routed.</li>
       </ul>
-      <div class="tagline"><strong>Payload-only. Transport-agnostic. Backward-compatible</strong> — a wallet that ignores <code>networks[]</code> behaves exactly as before. Chain IDs follow <a href="https://github.com/ChainAgnostic/CAIPs/blob/main/CAIPs/caip-2.md">CAIP-2</a>, the same convention already used by WalletConnect v2.</div>
+      <div class="tagline"><strong>No new version field.</strong> Wallets and dApps route by <code>peer.version</code>, which already flows on every Beacon message. A wallet that hasn't upgraded keeps publishing <code>peer.version = "3"</code>, behaves exactly as before, and is detected by the dApp SDK rather than guessed from missing fields. Chain IDs follow <a href="https://github.com/ChainAgnostic/CAIPs/blob/main/CAIPs/caip-2.md">CAIP-2</a>, the same convention already used by WalletConnect v2.</div>
     </div>
 
     <h3 style="margin-top:2rem;">Out of scope</h3>
@@ -292,22 +293,32 @@
     </ul>
 
     <h2>Why it's cheap</h2>
-    <p>This is a <strong>payload delta</strong>, not a new transport. The three existing TZIP-10 transports (extension PostMessage, Matrix P2P, WalletConnect v2) carry the new fields unchanged. For an extension wallet like Temple, the change is a small diff in the permission handler — no transport plumbing, no new APIs, no new permissions.</p>
-    <p>The dApp senses capability directly from the response shape — no SDK version check, no feature probe:</p>
-<pre><code><span class="kw">const</span> result = <span class="kw">await</span> client.<span class="fn">requestPermissions</span>({ networks: [...] })
+    <p>This is a <strong>payload delta plus a one-byte version bump</strong>, not a new transport. The three existing TZIP-10 transports (extension PostMessage, Matrix P2P, WalletConnect v2) already stamp <code>peer.version</code> on every payload from a single constant (<code>BEACON_VERSION</code>) — bumping that constant from <code>"3"</code> to <code>"4"</code> propagates the new version to all three transports automatically.</p>
+    <p>The dApp declares which version it requires; the SDK detects unupgraded wallets from the response <code>peer.version</code> and raises a structured error. No field-presence probing, no double-version-field reconciliation:</p>
+<pre><code><span class="kw">const</span> client = <span class="kw">new</span> <span class="fn">DAppClient</span>({
+  name: <span class="str">'My multi-chain dApp'</span>,
+  <span class="cm">// Defaults to BEACON_VERSION = '4'. Override to '3' if you want</span>
+  <span class="cm">// to remain compatible with unupgraded wallets.</span>
+  <span class="add">requiredMinimumVersion: <span class="str">'4'</span></span>,
+})
 
-<span class="kw">if</span> (result.accounts) {
-  <span class="cm">// multi-chain wallet — result.accounts is the per-chain map</span>
-} <span class="kw">else</span> {
-  <span class="cm">// pre-upgrade wallet — standard TZIP-10 v2 behavior, single chain</span>
+<span class="kw">try</span> {
+  <span class="kw">const</span> result = <span class="kw">await</span> client.<span class="fn">requestPermissions</span>({ networks: [...] })
+  <span class="cm">// peer.version &gt;= '4' wallet — result.accounts is the per-chain map</span>
+} <span class="kw">catch</span> (e) {
+  <span class="kw">if</span> (e <span class="kw">instanceof</span> VersionUnsupportedBeaconError) {
+    <span class="cm">// wallet served peer.version &lt; '4' — surface a clear upgrade banner</span>
+    <span class="fn">showWalletUpgradeBanner</span>(e.message)
+  } <span class="kw">else</span> <span class="kw">throw</span> e
 }</code></pre>
 
     <h2>Observations</h2>
     <ul>
-      <li><strong>Backward-compat is automatic.</strong> Unknown fields on <code>permission_request</code> pass through silently in the current SDK (plain cast, no schema validation). Older wallets see a v2 request; newer wallets see both fields.</li>
-      <li><strong>Extension wallets are trivial to upgrade.</strong> The existing <code>chrome.runtime</code> channel is untouched; the handler adds a <code>msg.networks ?? []</code> branch and returns an <code>accounts</code> map.</li>
-      <li><strong>WalletConnect v2 needs a small patch.</strong> In WC2 the session proposal <em>is</em> the first message, so multi-chain has to be declared up front in <code>requiredNamespaces</code> / <code>optionalNamespaces</code>. One change to <code>WalletConnectCommunicationClient</code>.</li>
+      <li><strong>Backward compat is mandatory, not a policy choice.</strong> An upgraded wallet MUST continue to serve every <code>peer.version</code> it previously published (including <code>"3"</code> for existing dApps on octez.connect ≥ 4.8.3). Wallets that haven't upgraded keep publishing <code>peer.version = "3"</code> — we cannot modify them, and we don't need to: the dApp SDK detects the mismatch from the wallet's response <code>peer.version</code> and raises <code>VersionUnsupportedBeaconError</code>.</li>
+      <li><strong>Extension wallets are trivial to upgrade.</strong> The existing <code>chrome.runtime</code> channel is untouched; the wallet's permission handler gains one branch at its entry — <code>if (peer.version &gt;= "4") { multiChainPath(req) } else { legacyPath(req) }</code> — and the multi-chain handler reads <code>req.networks</code> directly. No <code>req.networks ?? []</code> field-presence checks scattered across the codebase.</li>
+      <li><strong>WalletConnect v2 needs a small patch.</strong> In WC2 the session proposal <em>is</em> the first message, so multi-chain has to be declared up front in <code>requiredNamespaces</code> / <code>optionalNamespaces</code>. One change to <code>WalletConnectCommunicationClient</code>; <code>peer.version</code> already flows through the pairing payload.</li>
       <li><strong>Same key across Tezos-family chains.</strong> Ed25519 keys are valid on both L1 and the Michelson interface, so <code>accounts</code> entries are often identical. The structure supports distinct keys per chain if the wallet uses different HD paths.</li>
+      <li><strong>Forward-extensible by construction.</strong> A future revision (<code>peer.version = "5"</code>) reuses the same single-branch routing in the wallet and the same <code>requiredMinimumVersion</code> mechanism in the dApp SDK. No new wire field is added at that point either.</li>
     </ul>
 
     <div class="status"><strong>Status:</strong> validated end-to-end on Matrix P2P and WalletConnect v2 on a dual-runtime previewnet. See <a href="#demo">Demo</a>.</div>
@@ -330,9 +341,11 @@
     <div class="proposal-box">
       <div class="label">Protocol summary</div>
       <ul>
-        <li><code>permission_request</code> + optional <code>networks[]</code></li>
-        <li><code>permission_response</code> + optional <code>accounts</code> map</li>
+        <li><code>peer.version</code> bumps from <code>"3"</code> to <code>"4"</code> — wallets route on this; dApps require this; no new field.</li>
+        <li><code>permission_request</code> + optional <code>networks[]</code> (read only on the v4 path)</li>
+        <li><code>permission_response</code> + optional <code>accounts</code> map (returned only on the v4 path)</li>
         <li><code>operation_request.network</code> accepts CAIP-2 string</li>
+        <li>dApp SDK raises <code>VersionUnsupportedBeaconError</code> if the wallet's served <code>peer.version</code> is below the dApp's declared <code>requiredMinimumVersion</code>.</li>
       </ul>
       <div class="tagline">Pick the audience that applies to your wallet or dApp.</div>
     </div>
@@ -348,11 +361,11 @@
       <h3>dApp integration</h3>
 
       <div class="note">
-        <strong>dApp role.</strong> Declare which chains you need at connection time, detect the wallet's capability from the response shape, and tag each operation with its target chain ID. Fee estimation is the wallet's job — send operation details without fees.
+        <strong>dApp role.</strong> Declare which chains you need at connection time, declare which protocol version you require (defaults to the SDK's <code>BEACON_VERSION</code>), and tag each operation with its target chain ID. The SDK surfaces a structured <code>VersionUnsupportedBeaconError</code> when the wallet's served <code>peer.version</code> is below the dApp's required minimum. Fee estimation is the wallet's job — send operation details without fees.
       </div>
 
       <div class="note warn">
-        <strong>SDK extension required.</strong> The Beacon SDK (<code>@airgap/beacon-dapp</code> / <code>@tezos-x/octez.connect-dapp</code>) needs to accept the new parameters natively. The diffs below show the proposed clean API. Until the SDK is updated, these parameters must be injected via an internal workaround — see the POC source (<code>wc2/dapp/src/main.ts</code>) for reference.
+        <strong>SDK extension required.</strong> The Beacon SDK (<code>@airgap/beacon-dapp</code> / <code>@tezos-x/octez.connect-dapp</code>) needs to (a) bump <code>BEACON_VERSION</code> to <code>"4"</code>, (b) accept a first-class <code>networks</code> option on <code>requestPermissions</code>, and (c) raise <code>VersionUnsupportedBeaconError</code> when the wallet's served <code>peer.version</code> is below the dApp's <code>requiredMinimumVersion</code>. The reference implementation lives on the <a href="https://github.com/trilitech/octez.connect/tree/feat/peer-version-handshake"><code>feat/peer-version-handshake</code></a> branch of <code>trilitech/octez.connect</code> (head <code>ac3194a1</code>); see <a href="https://github.com/trilitech/tezos-x-octez-connect/blob/main/specs/002-peer-version-handshake/demo-branch.md"><code>specs/002-peer-version-handshake/demo-branch.md</code></a> for reproduction.
       </div>
 
       <h4>Permission flow</h4>
@@ -377,21 +390,17 @@
 <span class="add">    networks: [
       { chainId: <span class="str">'tezos:NetXsqzbfFenSTS'</span>,
         rpcUrl: L1_RPC, name: <span class="str">'L1'</span> },
-      { chainId: <span class="str">'tezos:NetXH12Aer3be93'</span>,
+      { chainId: <span class="str">'tezos:NetXY2oPPzkxUW1'</span>,
         rpcUrl: L2_RPC,
         name: <span class="str">'Michelson interface'</span> },
     ],</span>
   })
 
-<span class="cm">// Detect wallet version from response</span>
-<span class="add"><span class="kw">if</span> (result.accounts) {
-  <span class="cm">// v3 — wallet approved multi-chain</span>
-  v3Accounts = result.accounts
-  <span class="cm">// { 'tezos:NetX…': { publicKey } }</span>
-} <span class="kw">else</span> {
-  <span class="cm">// v2 — wallet is single-chain only</span>
-  singlePubKey = result.publicKey
-}</span></code></pre>
+<span class="cm">// Promise either resolves (peer.version &gt;= '4')</span>
+<span class="cm">// or rejects with VersionUnsupportedBeaconError</span>
+<span class="cm">// — handled in the surrounding try/catch.</span>
+<span class="add">v4Accounts = result.accounts
+<span class="cm">// { 'tezos:NetX…': { publicKey } }</span></span></code></pre>
         </div>
       </div>
 
@@ -414,7 +423,7 @@
           <pre><code><span class="cm">// Specify target chain alongside the op</span>
 <span class="kw">const</span> result = <span class="kw">await</span> client
   .<span class="fn">requestOperation</span>({
-<span class="add">    network: <span class="str">'tezos:NetXH12Aer3be93'</span>,  <span class="cm">// CAIP-2</span></span>
+<span class="add">    network: <span class="str">'tezos:NetXY2oPPzkxUW1'</span>,  <span class="cm">// CAIP-2</span></span>
     operationDetails: [
       { kind: <span class="str">'transaction'</span>,
         amount: <span class="str">'1'</span>,
@@ -436,23 +445,36 @@
         <li>
           <div class="edge-title">Wallet only approves some chains (partial <code>accounts</code> map)</div>
           <div class="edge-body">The <code>accounts</code> map may not contain all requested chain IDs. Check before enabling each chain's operations:
-            <pre><code><span class="kw">const</span> canUseL2 = !!v3Accounts?.[<span class="str">'tezos:NetXH12Aer3be93'</span>]
+            <pre><code><span class="kw">const</span> canUseL2 = !!v3Accounts?.[<span class="str">'tezos:NetXY2oPPzkxUW1'</span>]
 btnL2.disabled = !canUseL2</code></pre>
           </div>
         </li>
         <li>
-          <div class="edge-title">Wallet doesn't support multi-chain (v2 response — no <code>accounts</code>)</div>
-          <div class="edge-body">Fall back to single-chain mode. Disable operations that require a chain not covered by the legacy session:
-            <pre><code><span class="kw">if</span> (!result.accounts) {
-  <span class="cm">// v2: only L1 (client's init network) is available</span>
-  btnL2.disabled = <span class="kw">true</span>
+          <div class="edge-title">Wallet hasn't upgraded to <code>peer.version = "4"</code></div>
+          <div class="edge-body">The dApp SDK detects this from the wallet's response <code>peer.version</code> and throws <code>VersionUnsupportedBeaconError</code> before any payload-shape processing. Catch it to render an upgrade prompt; the rejection carries both the dApp's required minimum and the wallet's actual served version, so the message is precise:
+            <pre><code><span class="kw">catch</span> (e) {
+  <span class="kw">if</span> (e <span class="kw">instanceof</span> VersionUnsupportedBeaconError) {
+    <span class="fn">showError</span>(
+      <span class="str">`Wallet supports version ${e.walletServedVersion}; `</span> +
+      <span class="str">`dApp requires ${e.requiredMinimumVersion}.`</span>
+    )
+  }
 }</code></pre>
+          </div>
+        </li>
+        <li>
+          <div class="edge-title">dApp wants to tolerate older wallets</div>
+          <div class="edge-body">Override the default <code>requiredMinimumVersion</code> at SDK construction. The override is capped at the SDK's own <code>BEACON_VERSION</code>:
+            <pre><code><span class="kw">const</span> client = <span class="kw">new</span> <span class="fn">DAppClient</span>({
+  name: <span class="str">'My dApp'</span>,
+  requiredMinimumVersion: <span class="str">'3'</span>,  <span class="cm">// accept legacy wallets</span>
+})</code></pre>
           </div>
         </li>
         <li>
           <div class="edge-title">Operation targeted at a chain not in the session</div>
           <div class="edge-body">Guard before sending to avoid a confusing wallet error:
-            <pre><code><span class="kw">if</span> (v3Accounts && !v3Accounts[targetChainId]) {
+            <pre><code><span class="kw">if</span> (v4Accounts && !v4Accounts[targetChainId]) {
   <span class="fn">showError</span>(<span class="str">'Chain not in session — reconnect to add it'</span>)
   <span class="kw">return</span>
 }</code></pre>
@@ -489,30 +511,35 @@ btnL2.disabled = !canUseL2</code></pre>
 }</code></pre>
         </div>
         <div>
-          <span class="diff-label after">After — multi-chain</span>
+          <span class="diff-label after">After — multi-chain, routed by peer.version</span>
           <pre><code><span class="kw">case</span> <span class="str">'permission_request'</span>: {
-  <span class="add"><span class="kw">const</span> networks = msg.networks ?? []   <span class="cm">// ← new</span></span>
+  <span class="add"><span class="cm">// ONE branch at handler entry — peer.version is the routing key.</span>
+  <span class="kw">if</span> (Number(peer.version) &gt;= 4) {
+    <span class="kw">return</span> <span class="fn">handlePermissionRequestV4</span>(msg, peer)
+  }
+  <span class="cm">// Legacy path below — no field-presence checks for networks[].</span></span>
   <span class="kw">const</span> ok = <span class="kw">await</span>
-    <span class="fn">showApproval</span>(msg.appMetadata.name<span class="add">, networks</span>)
+    <span class="fn">showApproval</span>(msg.appMetadata.name)
   <span class="kw">if</span> (!ok) {
     <span class="fn">reject</span>(<span class="str">'ABORTED_ERROR'</span>)
     <span class="kw">break</span>
   }
-<span class="add">  <span class="cm">// Build accounts map and store registry</span>
+<span class="add">  <span class="cm">// handlePermissionRequestV4 (the only place that reads networks[]):</span>
+  <span class="kw">const</span> networks = msg.networks  <span class="cm">// no ?? [] — routing already proved it's there</span>
   <span class="kw">const</span> accounts = {}, registry = {}
   <span class="kw">for</span> (<span class="kw">const</span> net <span class="kw">of</span> networks) {
     <span class="kw">const</span> pk = <span class="fn">keyForChain</span>(net.chainId)
     accounts[net.chainId] = { publicKey: pk }
     <span class="kw">if</span> (net.rpcUrl) registry[net.chainId] = net.rpcUrl
   }
-  <span class="kw">if</span> (networks.length)
-    <span class="kw">await</span> chrome.storage.session.<span class="fn">set</span>({ registry })</span>
+  <span class="kw">await</span> chrome.storage.session.<span class="fn">set</span>({ registry })</span>
 
   <span class="fn">respond</span>({
     type: <span class="str">'permission_response'</span>,
     id: msg.id,
+    <span class="add">version: <span class="str">'4'</span>,  <span class="cm">// served version — dApp SDK checks this</span></span>
     publicKey: wallet.publicKey,
-    <span class="add">...(networks.length && { accounts }),  <span class="cm">// ← new</span></span>
+    <span class="add">accounts,  <span class="cm">// returned unconditionally on the v4 path</span></span>
   })
   <span class="kw">break</span>
 }</code></pre>
@@ -584,7 +611,7 @@ btnL2.disabled = !canUseL2</code></pre>
           <div class="edge-title">Operation request for a chain not in the stored registry</div>
           <div class="edge-body">Use a hardcoded fallback for known chains, or return an <code>operation_error</code> for truly unknown ones. Don't crash silently.
             <pre><code><span class="kw">function</span> <span class="fn">fallback</span>(chainId) {
-  <span class="kw">if</span> (chainId === <span class="str">'tezos:NetXH12Aer3be93'</span>) <span class="kw">return</span> MICHELSON_RPC
+  <span class="kw">if</span> (chainId === <span class="str">'tezos:NetXY2oPPzkxUW1'</span>) <span class="kw">return</span> MICHELSON_RPC
   <span class="kw">if</span> (chainId === <span class="str">'tezos:NetXsqzbfFenSTS'</span>)  <span class="kw">return</span> L1_RPC
   <span class="kw">throw new</span> <span class="fn">Error</span>(<span class="str">`Unknown chain: ${chainId}`</span>)
 }</code></pre>
@@ -709,13 +736,15 @@ btnL2.disabled = !canUseL2</code></pre>
       }
       <span class="kw">const</span> pk  = <span class="kw">await</span> signer.<span class="fn">publicKey</span>()
       <span class="kw">const</span> accounts = {}
-      <span class="kw">for</span> (<span class="kw">const</span> net <span class="kw">of</span> (m.networks ?? [])) {
+      <span class="cm">// peer.version &gt;= '4' on this branch (routing has already filtered);</span>
+      <span class="cm">// networks is guaranteed present — no ?? [] guard.</span>
+      <span class="kw">for</span> (<span class="kw">const</span> net <span class="kw">of</span> m.networks) {
         accounts[net.chainId] = { publicKey: pk }
         <span class="kw">if</span> (net.rpcUrl) registry[net.chainId] = net.rpcUrl
       }
       <span class="fn">send</span>({ type: <span class="str">'tzip10-popup'</span>,
              action: <span class="str">'permission-response'</span>,
-             id: m.id, publicKey: pk, accounts })
+             id: m.id, version: <span class="str">'4'</span>, publicKey: pk, accounts })
     }
 
     <span class="kw">if</span> (m.action === <span class="str">'operation-request'</span>) {

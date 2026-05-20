@@ -25,9 +25,9 @@ import { MemoryStorage } from './storage'
 const PORT = parseInt(process.env.PORT ?? '5174')
 
 const WC2_PROJECT_ID = 'fb4d4407a8fe167d79bd14b5afcc7230'
-const L2_CHAIN  = 'tezos:NetXH12Aer3be93'
+const L2_CHAIN  = 'tezos:NetXY2oPPzkxUW1'
 const L1_RPC    = 'https://rpc.shadownet.teztnets.com'
-const L2_RPC    = 'https://demo.txpark.nomadic-labs.com/rpc/tezlink'
+const L2_RPC    = 'https://michelson.previewnet.tezosx.nomadic-labs.com'
 
 // Suppress SDK-internal crashes so the Express server stays alive.
 // The "unload" library (imported by broadcast-channel which is used by octez.connect-wallet)
@@ -77,6 +77,23 @@ const DEFAULT_RPC = 'https://rpc.shadownet.teztnets.com'
 // V2_MODE=true → wallet ignores networks[] and responds in legacy v2 shape (for backward-compat test)
 let v2Mode: boolean = process.env.V2_MODE === 'true'
 
+/**
+ * Spec 002-peer-version-handshake test-harness flag.
+ *
+ * When set (via POST /test-config or env OVERRIDE_OUTGOING_VERSION), the
+ * wallet simulates an "unupgraded wallet" by mutating the incoming
+ * message's `version` field BEFORE calling client.respond(). The SDK's
+ * OutgoingResponseInterceptor mirrors `request.version` onto the
+ * outgoing response, so a value of '3' here causes the wallet to
+ * respond with peer.version='3' even when the dApp sent '4' — which
+ * is exactly what the dApp-side SDK uses to detect an unupgraded
+ * wallet and raise VersionUnsupportedBeaconError.
+ *
+ * This flag is test-only. Leave unset for normal operation.
+ */
+let overrideOutgoingVersion: string | null =
+  process.env.OVERRIDE_OUTGOING_VERSION ?? null
+
 // chainId (CAIP-2) → rpcUrl — populated from networks[] on permission_request
 let networkRegistry: Record<string, string> = {}
 
@@ -100,7 +117,7 @@ async function executeOps(
   const tezos = new TezosToolkit(rpcUrl)
   tezos.setSignerProvider(signer)
 
-  const isL2 = rpcUrl.includes('txpark') || rpcUrl.includes('tezlink')
+  const isL2 = rpcUrl.includes('txpark') || rpcUrl.includes('tezlink') || rpcUrl.includes('michelson.previewnet.tezosx')
   const ops = operations.map((op: any) => {
     if (op.kind === 'transaction') {
       return { kind: 'transaction' as const, to: op.destination, amount: parseInt(op.amount, 10), mutez: true }
@@ -112,10 +129,11 @@ async function executeOps(
     const estimates = await tezos.estimate.batch(ops)
     const opsWithFees = ops.map((op: any, i: number) => ({
       ...op,
-      // ×2 safety margin: Taquito 24.2.0 underestimates fees on tezlink
-      fee: Math.ceil((estimates[i]?.suggestedFeeMutez ?? 0) * 2),
-      gasLimit: Math.ceil((estimates[i]?.gasLimit ?? 1000) * 1.5),
-      storageLimit: estimates[i]?.storageLimit ?? 257,
+      // ×2 fee, ×3 gas, ×2 storage safety margin: Taquito 24.2.0 underestimates
+      // on the Tezos X previewnet (Michelson protocol PtTALL…).
+      fee: Math.ceil((estimates[i]?.suggestedFeeMutez ?? 0) * 2) + 100,
+      gasLimit: Math.max(Math.ceil((estimates[i]?.gasLimit ?? 1000) * 3), 5000),
+      storageLimit: Math.max(estimates[i]?.storageLimit ?? 257, 300),
     }))
     const result = await tezos.contract.batch(opsWithFees).send()
 
@@ -228,11 +246,50 @@ async function main(): Promise<void> {
   await client.init()
 
   await client.connect(async (message) => {
-    if (message.type === BeaconMessageType.PermissionRequest) {
-      const incomingNetworks: any[] = (message as any).networks ?? []
+    // Test-only: mutate the incoming version to simulate an unupgraded
+    // wallet. The SDK's OutgoingResponseInterceptor mirrors
+    // request.version onto the outgoing response, so this propagates
+    // automatically. See spec 002-peer-version-handshake T021 cell B.
+    if (overrideOutgoingVersion) {
+      ;(message as any).version = overrideOutgoingVersion
+    }
 
-      if (incomingNetworks.length > 0 && !v2Mode) {
-        // v3 mode: respond with accounts map, one entry per approved chain
+    if (message.type === BeaconMessageType.PermissionRequest) {
+      // Spec 002-peer-version-handshake: single-branch routing on the
+      // peer.version that arrived with the message. v2Mode forces legacy
+      // behavior for end-to-end backward-compat tests. Otherwise:
+      //   peer.version >= '4' → multi-network handler (reads networks[])
+      //   peer.version <  '4' → legacy handler (single-network)
+      // No `networks ?? []` field-presence detection.
+      // Spec 002-peer-version-handshake: route on peer.version sourced
+      // from PeerManager (the authoritative store), not from the message
+      // envelope. The SDK currently hardcodes `version: '2'` on the
+      // inner permission_request envelope (legacy compat stamp), so the
+      // envelope version is NOT the routing key. The dApp's pairing
+      // payload carries the real peer.version (= BEACON_VERSION at the
+      // dApp), which the wallet stored at pairing time.
+      const peers = await client.getPeers()
+      const senderId = (message as any).senderId
+      const matchingPeer = peers.find(
+        (p: any) => p.senderId === senderId || p.publicKey === senderId,
+      ) as any
+      const peerVersionStr =
+        matchingPeer?.version ??
+        (message as any).peerVersion ??
+        (message as any).version ??
+        '0'
+      const peerVersion = Number(peerVersionStr)
+      const isMultiNetwork =
+        !v2Mode && Number.isFinite(peerVersion) && peerVersion >= 4
+
+      console.log(`[wallet] permission_request received: peerVersion=${peerVersionStr} (from ${matchingPeer ? 'peerManager' : 'envelope'}), innerVersion=${(message as any).version}, isMultiNetwork=${isMultiNetwork}, networks=${JSON.stringify((message as any).networks)}`)
+
+      if (isMultiNetwork) {
+        // Multi-network handler — networks[] is guaranteed to be the
+        // mode-carrying field on the v4 path; treat its absence as a
+        // protocol error from the dApp side (still no field-presence
+        // version detection — we're past that point).
+        const incomingNetworks: any[] = (message as any).networks ?? []
         networkRegistry = {}
         const accounts: Record<string, { publicKey: string }> = {}
         for (const net of incomingNetworks) {
@@ -245,12 +302,12 @@ async function main(): Promise<void> {
           type: BeaconMessageType.PermissionResponse,
           id: message.id,
           publicKey,          // keep for SDK session establishment
-          accounts,           // v3 extension: multi-chain account map
+          accounts,           // multi-network account map, keyed by CAIP-2 chainId
           network: message.network,
           scopes: message.scopes ?? [PermissionScope.OPERATION_REQUEST],
         } as any)
       } else {
-        // v2 mode (legacy or V2_MODE=true)
+        // Legacy single-network handler. No networks[] inspection.
         await client.respond({
           type: BeaconMessageType.PermissionResponse,
           id: message.id,
@@ -295,14 +352,16 @@ async function main(): Promise<void> {
 
         // tezlink (Michelson L2): estimate fees first, then apply 2× safety margin
         let result: any
-        const isL2 = rpcUrl.includes('txpark') || rpcUrl.includes('tezlink')
+        const isL2 = rpcUrl.includes('txpark') || rpcUrl.includes('tezlink') || rpcUrl.includes('michelson.previewnet.tezosx')
         if (isL2) {
           const estimates = await tezos.estimate.batch(ops)
           const opsWithFees = ops.map((op: any, i: number) => ({
             ...op,
-            fee: Math.ceil((estimates[i]?.suggestedFeeMutez ?? 0) * 2),
-            gasLimit: Math.ceil((estimates[i]?.gasLimit ?? 1000) * 1.5),
-            storageLimit: estimates[i]?.storageLimit ?? 257,
+            // ×2 fee, ×3 gas, ×2 storage safety margin: Taquito 24.2.0 underestimates
+            // on the Tezos X previewnet (Michelson protocol PtTALL…).
+            fee: Math.ceil((estimates[i]?.suggestedFeeMutez ?? 0) * 2) + 100,
+            gasLimit: Math.max(Math.ceil((estimates[i]?.gasLimit ?? 1000) * 3), 5000),
+            storageLimit: Math.max(estimates[i]?.storageLimit ?? 257, 300),
           }))
 
           // Snapshot counter before injection so we can detect inclusion.
@@ -347,6 +406,13 @@ async function main(): Promise<void> {
         } as any)
       } catch (err: any) {
         console.error('[wallet] operation error:', err.message)
+        console.error('[wallet] operation error full:', JSON.stringify({
+          name: err.name,
+          message: err.message,
+          status: err.status,
+          body: err.body?.slice?.(0, 600) ?? err.body,
+          errors: err.errors,
+        }, null, 2).slice(0, 1500))
         await client.respond({
           type: BeaconMessageType.Error,
           id: message.id,
@@ -364,8 +430,20 @@ async function main(): Promise<void> {
   app.post('/connect', async (req, res) => {
     try {
       const uri = req.body as string
-      const peer = await new Serializer().deserialize(uri)
-      await client.addPeer(peer as any)
+      const peer = await new Serializer().deserialize(uri) as any
+      // Spec 002-peer-version-handshake harness: if a beaconVersion
+      // override is set, downgrade the incoming peer.version BEFORE
+      // addPeer. This makes the wallet's getPeerInfo use the downgraded
+      // value for its pairing response, so the dApp's PeerManager
+      // stores the downgraded peer.version. That's what makes the
+      // dApp-side SDK see the wallet as "unupgraded" (peer.version='3')
+      // and raise VersionUnsupportedBeaconError. Test-only.
+      console.log(`[wallet] /connect: peer.version=${peer?.version}, override=${overrideOutgoingVersion}`)
+      if (overrideOutgoingVersion && peer && typeof peer === 'object') {
+        peer.version = overrideOutgoingVersion
+        console.log(`[wallet] /connect: after override, peer.version=${peer.version}`)
+      }
+      await client.addPeer(peer)
       res.sendStatus(200)
     } catch (err: any) {
       console.error('[wallet] addPeer error:', err.message)
@@ -385,6 +463,47 @@ async function main(): Promise<void> {
     if (mode === 'v2') { v2Mode = true; res.sendStatus(200) }
     else if (mode === 'v3') { v2Mode = false; res.sendStatus(200) }
     else res.status(400).json({ error: 'mode must be "v2" or "v3"' })
+  })
+
+  /**
+   * POST /test-config — spec 002-peer-version-handshake harness control.
+   *
+   * Body shape:
+   *   {
+   *     beaconVersion?: string  // e.g. '3' simulates an unupgraded wallet
+   *     overrideOutgoingVersion?: string  // alias of beaconVersion
+   *     transport?: 'matrix' | 'walletconnect' | 'postmessage'  // ignored today;
+   *       transport is selected at wallet startup. Accepted in the API
+   *       for symmetry with the dApp harness and forward compat.
+   *     v2Mode?: boolean  // explicit legacy-mode override (same as POST /set-mode).
+   *   }
+   *
+   * Pass an empty body `{}` to clear all overrides.
+   */
+  app.post('/test-config', (req, res) => {
+    const body = (req.body ?? {}) as any
+    // Only update overrideOutgoingVersion when the caller explicitly
+    // includes a beaconVersion (or overrideOutgoingVersion) key. Omitting
+    // the key MUST preserve the existing override; this lets clients
+    // set v2Mode independently without clobbering the version override.
+    if ('beaconVersion' in body || 'overrideOutgoingVersion' in body) {
+      const targetVersion = body.beaconVersion ?? body.overrideOutgoingVersion ?? null
+      if (targetVersion !== null && !/^\d+$/.test(String(targetVersion))) {
+        res.status(400).json({
+          error: 'beaconVersion must be a decimal-integer string or null',
+        })
+        return
+      }
+      overrideOutgoingVersion = targetVersion === null ? null : String(targetVersion)
+    }
+    if (typeof body.v2Mode === 'boolean') {
+      v2Mode = body.v2Mode
+    }
+    res.json({
+      overrideOutgoingVersion,
+      v2Mode,
+      note: 'transport selection is set at wallet startup; restart with TRANSPORT=... to change it',
+    })
   })
 
   // GET /wc2-ready — 200 once WC2 SignClient is initialized and listening

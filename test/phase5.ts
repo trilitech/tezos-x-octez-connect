@@ -19,9 +19,9 @@ import { SignClient } from '@walletconnect/sign-client'
 
 const WALLET_URL    = process.env.WALLET_URL ?? 'http://localhost:5174'
 const L1_RPC        = 'https://rpc.shadownet.teztnets.com'
-const L2_RPC        = 'https://demo.txpark.nomadic-labs.com/rpc/tezlink'
+const L2_RPC        = 'https://michelson.previewnet.tezosx.nomadic-labs.com'
 const L1_CHAIN      = 'tezos:NetXsqzbfFenSTS'
-const L2_CHAIN      = 'tezos:NetXH12Aer3be93'
+const L2_CHAIN      = 'tezos:NetXY2oPPzkxUW1'
 const DEST          = process.env.DEST ?? 'tz1VSUr8wwNhLAzempoch5d6hLRiTh8Cjcjb'
 const WC2_PROJECT_ID = 'fb4d4407a8fe167d79bd14b5afcc7230'
 
@@ -64,7 +64,7 @@ async function poll(
 
 async function waitForConfirmation(hash: string, rpc: string, timeoutMs = 90_000): Promise<void> {
   // For L2 (tezlink): poll account counter advance — ops not in blocks/{id}/operations
-  if (rpc.includes('txpark') || rpc.includes('tezlink')) {
+  if (rpc.includes('txpark') || rpc.includes('tezlink') || rpc.includes('michelson.previewnet.tezosx')) {
     // We don't have the sender address here; just sleep a bit and trust the wallet confirmed it
     console.log(`  [confirm] L2 hash ${hash.slice(0, 16)}… (counter-based, already confirmed by wallet)`)
     return
