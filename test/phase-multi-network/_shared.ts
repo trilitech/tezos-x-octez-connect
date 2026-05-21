@@ -38,10 +38,14 @@ export async function get(url: string): Promise<any> {
 }
 
 export async function post(url: string, body?: unknown): Promise<any> {
+  const isText = typeof body === 'string'
   const r = await fetch(url, {
     method: 'POST',
-    headers: body !== undefined ? { 'Content-Type': 'application/json' } : {},
-    body: body !== undefined ? JSON.stringify(body) : undefined,
+    headers:
+      body !== undefined
+        ? { 'Content-Type': isText ? 'text/plain' : 'application/json' }
+        : {},
+    body: body !== undefined ? (isText ? body : JSON.stringify(body)) : undefined,
   })
   if (!r.ok) {
     const text = await r.text()
@@ -69,26 +73,48 @@ export function assert(cond: unknown, msg: string): asserts cond {
  *
  * The body of step 1 is transport-specific and lives in the per-transport scaffold.
  */
-export async function runMultiNetworkMatrix(transport: Transport, pair: () => Promise<void>) {
+export async function runMultiNetworkMatrix(transport: Transport, _pairHook?: () => Promise<void>) {
   console.log(`\n=== multi-network matrix [${transport}] ===`)
 
   // Reset both apps to a clean state.
-  await post(`${WALLET_URL}/test-config`, { beaconVersion: null, v2Mode: false }).catch(() => {})
+  await post(`${WALLET_URL}/reset`, {}).catch(() => {})
   await post(`${DAPP_URL}/reset`, {}).catch(() => {})
+  await post(`${WALLET_URL}/test-config`, { beaconVersion: null, v2Mode: false }).catch(() => {})
 
-  await pair()
-
-  // Step 2: request permissions for both networks.
-  await post(`${DAPP_URL}/request-permissions`, {
+  // Step 1: kick off the permission flow on the dApp side — this generates
+  // the pairing URI. The call returns immediately (the actual pairing handshake
+  // is in-flight).
+  void post(`${DAPP_URL}/request-permissions`, {
     networks: [
       { chainId: L1_CHAIN, rpcUrl: L1_RPC, name: 'Shadownet L1' },
       { chainId: L2_CHAIN, rpcUrl: L2_RPC, name: 'Tezos X Previewnet L2' },
     ],
+  }).catch((err) => {
+    console.warn(`  (request-permissions returned: ${err?.message ?? err})`)
   })
 
-  // Step 3: verify both networks landed.
-  const perm = await get(`${DAPP_URL}/last-permission`)
-  assert(perm?.accounts, 'permission response missing accounts map')
+  // Step 2: poll for the pairing URI, then hand to wallet.
+  let uri: string | null = null
+  for (let i = 0; i < 10; i++) {
+    try {
+      uri = (await get(`${DAPP_URL}/pairing-uri`)) as string
+      if (uri && uri.length > 10) break
+    } catch {
+      // pairing URI not yet available
+    }
+    await new Promise((r) => setTimeout(r, 500))
+  }
+  assert(uri && uri.length > 10, 'no pairing URI emitted by dApp')
+  await post(`${WALLET_URL}/connect`, uri!)
+
+  // Step 3: poll /last-permission until accounts map arrives.
+  let perm: any = null
+  for (let i = 0; i < 20; i++) {
+    perm = await get(`${DAPP_URL}/last-permission`)
+    if (perm?.accounts) break
+    await new Promise((r) => setTimeout(r, 1_000))
+  }
+  assert(perm?.accounts, `permission response missing accounts map: ${JSON.stringify(perm)}`)
   const chainIds = Object.keys(perm.accounts)
   assert(chainIds.includes(L1_CHAIN), `expected L1_CHAIN in accounts: ${chainIds.join(', ')}`)
   assert(chainIds.includes(L2_CHAIN), `expected L2_CHAIN in accounts: ${chainIds.join(', ')}`)

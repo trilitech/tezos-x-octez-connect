@@ -26,14 +26,12 @@ import {
 } from './_shared'
 
 async function pairP2P() {
-  // Tell wallet which transport to use.
-  await post(`${WALLET_URL}/test-config`, { transport: 'matrix' }).catch(() => {})
-  // Ask dApp for a pairing URI.
-  const { uri } = await get(`${DAPP_URL}/pair?transport=matrix`)
-  // Hand it to the wallet.
+  // Ask dApp for the pairing URI (returns text/plain).
+  const uri = (await get(`${DAPP_URL}/pairing-uri`)) as string
+  if (!uri || uri.length < 10) throw new Error(`invalid pairing URI: ${uri}`)
+  // Hand it to the wallet (POST body is plain text per the spec 002 harness convention).
   await post(`${WALLET_URL}/connect`, uri)
-  // Give the relay a moment to settle. The dApp /last-permission endpoint
-  // is what we'll poll next, so no further sync is needed here.
+  // Give the relay a moment to settle.
   await new Promise((r) => setTimeout(r, 2_000))
 }
 

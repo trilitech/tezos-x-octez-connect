@@ -11,8 +11,8 @@
 import { DAPP_URL, WALLET_URL, post, get, runMultiNetworkMatrix } from './_shared'
 
 async function pairWC2() {
-  await post(`${WALLET_URL}/test-config`, { transport: 'walletconnect' }).catch(() => {})
-  const { uri } = await get(`${DAPP_URL}/pair?transport=walletconnect`)
+  const uri = (await get(`${DAPP_URL}/pairing-uri`)) as string
+  if (!uri || uri.length < 10) throw new Error(`invalid pairing URI: ${uri}`)
   await post(`${WALLET_URL}/connect`, uri)
   await new Promise((r) => setTimeout(r, 3_000))
 }

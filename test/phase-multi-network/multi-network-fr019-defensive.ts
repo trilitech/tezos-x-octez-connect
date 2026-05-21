@@ -17,8 +17,8 @@
 import { runFr019DefensiveCell, post, WALLET_URL, DAPP_URL, get } from './_shared'
 
 async function pairP2P() {
-  await post(`${WALLET_URL}/test-config`, { transport: 'matrix' }).catch(() => {})
-  const { uri } = await get(`${DAPP_URL}/pair?transport=matrix`)
+  const uri = (await get(`${DAPP_URL}/pairing-uri`)) as string
+  if (!uri || uri.length < 10) throw new Error(`invalid pairing URI: ${uri}`)
   await post(`${WALLET_URL}/connect`, uri)
   await new Promise((r) => setTimeout(r, 2_000))
 }
