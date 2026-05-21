@@ -118,6 +118,9 @@ export async function runMultiNetworkMatrix(transport: Transport, _pairHook?: ()
   assert(opL1?.transactionHash?.length > 0, 'L1 operation returned no transactionHash')
   console.log(`  ✓ L1 op hash: ${opL1.transactionHash.slice(0, 20)}…`)
 
+  // Wait past the SDK's 5-second rate-limit window (default: 2 req / 5 s).
+  await new Promise((r) => setTimeout(r, 6_000))
+
   // Step 6-7: operation on L2.
   const opL2 = await post(`${DAPP_URL}/request-operation`, {
     network: L2_CHAIN,
