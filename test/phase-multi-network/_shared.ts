@@ -34,7 +34,8 @@ export type Transport = 'matrix' | 'walletconnect' | 'postmessage'
 export async function get(url: string): Promise<any> {
   const r = await fetch(url)
   if (!r.ok) throw new Error(`GET ${url} -> ${r.status}`)
-  return r.json()
+  const ct = r.headers.get('content-type') ?? ''
+  return ct.includes('application/json') ? r.json() : r.text()
 }
 
 export async function post(url: string, body?: unknown): Promise<any> {
@@ -81,31 +82,20 @@ export async function runMultiNetworkMatrix(transport: Transport, _pairHook?: ()
   await post(`${DAPP_URL}/reset`, {}).catch(() => {})
   await post(`${WALLET_URL}/test-config`, { beaconVersion: null, v2Mode: false }).catch(() => {})
 
-  // Step 1: kick off the permission flow on the dApp side — this generates
-  // the pairing URI. The call returns immediately (the actual pairing handshake
-  // is in-flight).
-  void post(`${DAPP_URL}/request-permissions`, {
+  // Step 1: trigger the permission flow on the dApp side. The handler holds
+  // the response open until the pairing URI is generated; the await returns
+  // once /pairing-uri is ready to serve.
+  await post(`${DAPP_URL}/request-permissions`, {
     networks: [
       { chainId: L1_CHAIN, rpcUrl: L1_RPC, name: 'Shadownet L1' },
       { chainId: L2_CHAIN, rpcUrl: L2_RPC, name: 'Tezos X Previewnet L2' },
     ],
-  }).catch((err) => {
-    console.warn(`  (request-permissions returned: ${err?.message ?? err})`)
   })
 
-  // Step 2: poll for the pairing URI, then hand to wallet.
-  let uri: string | null = null
-  for (let i = 0; i < 10; i++) {
-    try {
-      uri = (await get(`${DAPP_URL}/pairing-uri`)) as string
-      if (uri && uri.length > 10) break
-    } catch {
-      // pairing URI not yet available
-    }
-    await new Promise((r) => setTimeout(r, 500))
-  }
-  assert(uri && uri.length > 10, 'no pairing URI emitted by dApp')
-  await post(`${WALLET_URL}/connect`, uri!)
+  // Step 2: fetch the pairing URI and hand it to the wallet.
+  const uri = (await get(`${DAPP_URL}/pairing-uri`)) as string
+  assert(uri && uri.length > 10, `invalid pairing URI: ${uri}`)
+  await post(`${WALLET_URL}/connect`, uri)
 
   // Step 3: poll /last-permission until accounts map arrives.
   let perm: any = null
