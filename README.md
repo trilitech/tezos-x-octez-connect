@@ -14,7 +14,8 @@ All six phases of the original POC are validated and done. The protocol-version 
 | [PoC planning and execution](https://trilitech.github.io/tezos-x-octez-connect/poc-plan.html) | Phase-by-phase plan, technical details, and test infrastructure |
 | [Wallet integration guide](docs/wallet-multichain-integration.md) | How to extend a Chrome extension or standalone wallet for multi-chain TZIP-10 |
 | [Peer-version handshake spec](specs/002-peer-version-handshake/spec.md) | Revised approach: route by `peer.version` (no new field). Supersedes `specs/001-version-negotiation/`. |
-| [Demo branch pointer](specs/002-peer-version-handshake/demo-branch.md) | Commit id and reproduction steps for the reference SDK changes on `octez.connect@feat/peer-version-handshake`. |
+| [Multi-network protocol spec](specs/003-multi-network-protocol/spec.md) | dApp-side SDK ergonomics tail: multi-network `getAccounts()`, first-class `requestOperation({ network })`, integrator dispatch pattern. Builds on spec 002. |
+| [Demo branch pointer](specs/002-peer-version-handshake/demo-branch.md) | Commit id and reproduction steps for the reference SDK changes on `octez.connect@feat/peer-version-handshake` (now carries both spec 002 and spec 003 commits). |
 
 ## Repo structure
 
@@ -29,10 +30,11 @@ docs/
   wallet-multichain-integration.md
 specs/
   002-peer-version-handshake/  Active spec: peer.version-based routing
+  003-multi-network-protocol/  Active spec: multi-network SDK ergonomics
 plan.html       Full development plan (GitHub Pages)
 octez.connect/  Local clone of trilitech/octez.connect (gitignored). The
                 feat/peer-version-handshake branch in this clone contains
-                the reference SDK implementation of spec 002.
+                the reference SDK implementation of specs 002 + 003.
 ```
 
 ## Running the tests

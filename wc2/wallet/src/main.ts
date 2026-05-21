@@ -9,8 +9,17 @@ import { TezosToolkit } from '@taquito/taquito'
 import { InMemorySigner } from '@taquito/signer'
 
 const WALLET_KEY = 'edsk3QoqBuvdamxouPhin7swCvkQNgq4jP5KZPbwWNnwdZpSpJiEbq'
+const L1_CHAIN   = 'tezos:NetXsqzbfFenSTS'
+const L2_CHAIN   = 'tezos:NetXY2oPPzkxUW1'
 const L1_RPC     = 'https://rpc.shadownet.teztnets.com'
 const L2_RPC     = 'https://michelson.previewnet.tezosx.nomadic-labs.com'
+
+// Spec 003 multi-network protocol — recommended integrator dispatch pattern.
+// Set of CAIP-2 chain ids this wallet supports. permission_request and
+// operation_request both check membership; unknown chain ids are rejected
+// with NETWORK_NOT_SUPPORTED. See specs/003-multi-network-protocol/data-model.md
+// "Integrator Dispatch Pattern".
+const SUPPORTED_CHAIN_IDS = new Set<string>([L1_CHAIN, L2_CHAIN])
 
 // ── DOM refs ──────────────────────────────────────────────────────────────────
 const accountAddr    = document.getElementById('account-addr')!
@@ -32,15 +41,15 @@ function addLog(msg: string, cls: 'ok' | 'err' | '' = '') {
 
 // ── Network helpers ────────────────────────────────────────────────────────────
 function networkDotClass(chainId: string) {
-  return chainId.includes('NetXH12') ? 'net-dot-l2' : 'net-dot-l1'
+  return chainId === L2_CHAIN ? 'net-dot-l2' : 'net-dot-l1'
 }
 
 function networkLabel(chainId: string) {
-  return chainId.includes('NetXH12') ? 'Michelson interface' : 'Shadownet L1'
+  return chainId === L2_CHAIN ? 'Michelson interface' : 'Shadownet L1'
 }
 
 function rpcForChain(chainId: string, registry: Record<string, string>): string {
-  return registry[chainId] ?? (chainId.includes('NetXH12') ? L2_RPC : L1_RPC)
+  return registry[chainId] ?? (chainId === L2_CHAIN ? L2_RPC : L1_RPC)
 }
 
 // ── Request UI ─────────────────────────────────────────────────────────────────
@@ -367,6 +376,22 @@ async function main() {
           rpcUrl: n.rpcUrl,
         }))
 
+        // Spec 003 FR-005: reject the whole request if any chain id is not in
+        // the wallet's supported set — no partial accounts[] is built.
+        const unsupportedNetworks = nets
+          .map((n) => n.chainId)
+          .filter((c) => !SUPPORTED_CHAIN_IDS.has(c))
+        if (unsupportedNetworks.length > 0) {
+          addLog(`Rejecting permission_request: unsupported networks ${unsupportedNetworks.join(', ')}`, 'err')
+          await client.respond({
+            type: BeaconMessageType.Error,
+            id: message.id,
+            errorType: 'NETWORK_NOT_SUPPORTED',
+            unsupportedNetworks,
+          } as any)
+          return
+        }
+
         showPermissionRequest(
           message.appMetadata?.name ?? 'Unknown dApp',
           nets,
@@ -410,6 +435,10 @@ async function main() {
       }
 
     } else if (message.type === BeaconMessageType.OperationRequest) {
+      // Spec 003: dispatch on the CAIP-2 chain id via the supported-set check.
+      // Both wire shapes (v4 string, v2 Network object) are normalized BEFORE
+      // the dispatch decision; per-chain RPC URL is then resolved via
+      // rpcForChain. Unknown chain ids are rejected with NETWORK_NOT_SUPPORTED.
       const networkField = (message as any).network
       let chainId: string
       let rpcUrl: string
@@ -421,6 +450,17 @@ async function main() {
         const raw = (networkField as any)?.chainId ?? ''
         chainId = raw.startsWith('tezos:') ? raw : `tezos:${raw}`
         rpcUrl  = (networkField as any)?.rpcUrl ?? L1_RPC
+      }
+
+      if (!SUPPORTED_CHAIN_IDS.has(chainId)) {
+        addLog(`Rejecting operation_request: unsupported network ${chainId}`, 'err')
+        await client.respond({
+          type: BeaconMessageType.Error,
+          id: message.id,
+          errorType: 'NETWORK_NOT_SUPPORTED',
+          unsupportedNetworks: [chainId],
+        } as any)
+        return
       }
 
       const ops: any[] = (message.operationDetails as any[]).map((op) => {

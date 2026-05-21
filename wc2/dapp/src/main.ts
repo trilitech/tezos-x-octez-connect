@@ -330,24 +330,13 @@ async function sendOp(
   setOpStatus(statusEl, 'pending', 'Waiting for signature…')
 
   try {
-    // The dApp tags the outgoing operation_request with its target chain
-    // (CAIP-2 string). With peer.version = '4' negotiated, the wallet's
-    // upgraded operation handler reads this field. Once the SDK adds a
-    // first-class `network` option on `requestOperation` (tracked separately
-    // — part of the multi-network protocol delta, not version negotiation),
-    // this small augmentation can be removed in favor of a clean call.
-    const orig = (client as any).makeRequest.bind(client)
-    ;(client as any).makeRequest = function (req: any, ...args: any[]) {
-      if (req?.type === 'operation_request') req.network = chainId
-      return orig(req, ...args)
-    }
-
-    let result: any
-    try {
-      result = await (client as any).requestOperation({ operationDetails })
-    } finally {
-      ;(client as any).makeRequest = orig
-    }
+    // Spec 003 multi-network protocol: per-call network selection is now a
+    // first-class option on requestOperation. The previous makeRequest
+    // monkey-patch has been removed.
+    const result: any = await client.requestOperation({
+      network: chainId,
+      operationDetails,
+    })
 
     const hash = result.transactionHash
     hashEl.textContent = hash

@@ -255,29 +255,15 @@ app.post('/request-operation', async (req, res) => {
   try {
     const { operationDetails, network } = req.body
 
-    // The version-negotiation feature (spec 002) added a first-class
-    // `networks` option to requestPermissions, but `requestOperation`'s
-    // `network` (CAIP-2 string) is part of the multi-network protocol
-    // delta tracked separately. Until that SDK API lands, we attach
-    // the CAIP-2 string via a small makeRequest hook. The wallet's
-    // upgraded operation handler (peer.version >= '4' path) reads it.
-    let restore: (() => void) | null = null
-    if (network) {
-      const orig = (client as any).makeRequest.bind(client)
-      ;(client as any).makeRequest = function (request: any, ...args: any[]) {
-        if (request?.type === 'operation_request') request.network = network
-        return orig(request, ...args)
-      }
-      restore = () => { ;(client as any).makeRequest = orig }
-    }
-
-    try {
-      const result = await (client as any).requestOperation({ operationDetails })
-      lastOp = { transactionHash: result.transactionHash }
-      res.json(lastOp)
-    } finally {
-      restore?.()
-    }
+    // Spec 003 multi-network protocol: per-call network selection is now a
+    // first-class option on requestOperation. The previous makeRequest
+    // monkey-patch has been removed.
+    const result = await client.requestOperation({
+      operationDetails,
+      ...(network ? { network } : {}),
+    })
+    lastOp = { transactionHash: result.transactionHash }
+    res.json(lastOp)
   } catch (err: any) {
     console.error('[dapp] requestOperation error:', err.message)
     res.status(500).json({ error: err.message })

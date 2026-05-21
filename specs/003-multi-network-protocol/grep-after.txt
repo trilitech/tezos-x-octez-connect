@@ -1,0 +1,24 @@
+# Post-change grep verification (T029)
+# Recorded: 2026-05-21T15:05:20Z
+
+## (client as any).makeRequest in reference dApps
+Expected: 0
+(no matches)
+Count: 0
+
+## partialAccountInfos[0] in DAppClient.ts
+Expected: 0 in permissionRequest path
+(no matches)
+Count: 
+
+## TezosBlockchain stub (accountId: '')
+Expected: 0
+(no matches)
+
+## Inline chain-id branching in reference wallets
+Expected: 0 in permission/operation handler bodies
+(no matches for inline networkField string discrimination)
+
+## isL2 substring checks in reference wallets (operation_request handler)
+Expected: 0 in operation_request handler — preserved only in helper functions
+

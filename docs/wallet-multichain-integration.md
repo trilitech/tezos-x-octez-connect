@@ -447,6 +447,88 @@ async function initPopupMode(signer: Signer): Promise<void> {
 
 ---
 
+## 3a. Recommended integrator dispatch pattern (spec 003)
+
+The wallet SDK's public surface is intentionally thin: `WalletClient.connect(callback)` delivers every incoming message to the integrator unchanged. Per-blockchain logic — RPC selection, fee estimation, protocol-specific signing, error mapping — is the **integrator's responsibility**. The following pattern is the recommended shape; integrators MAY implement equivalent logic differently as long as conformance rules C1–C5 (§4) hold.
+
+The pattern is a **CAIP-2-keyed dispatch table**:
+
+```typescript
+type BlockchainHandlerBundle = {
+  rpcUrl: string
+  onPermission: (chainId: string, publicKey: string) => Promise<{ publicKey: string }>
+  executeOps: (signer: InMemorySigner, operations: any[]) => Promise<string>
+}
+
+const L1_CHAIN = 'tezos:NetXsqzbfFenSTS'
+const L2_CHAIN = 'tezos:NetXY2oPPzkxUW1'
+
+const handlers: Record<string, BlockchainHandlerBundle> = {
+  [L1_CHAIN]: {
+    rpcUrl: 'https://rpc.shadownet.teztnets.com',
+    onPermission: async (_chainId, publicKey) => ({ publicKey }),
+    executeOps: (signer, ops) => executeL1Ops(signer, L1_RPC, ops),
+  },
+  [L2_CHAIN]: {
+    rpcUrl: 'https://michelson.previewnet.tezosx.nomadic-labs.com',
+    onPermission: async (_chainId, publicKey) => ({ publicKey }),
+    executeOps: (signer, ops) => executeL2Ops(signer, L2_RPC, ops),
+  },
+}
+
+await client.connect(async (message) => {
+  if (message.type === BeaconMessageType.PermissionRequest && Number(peer.version) >= 4) {
+    const incomingNetworks: Array<{ chainId: string }> = (message as any).networks ?? []
+    const requestedChainIds = incomingNetworks.map((n) =>
+      n.chainId.startsWith('tezos:') ? n.chainId : `tezos:${n.chainId}`,
+    )
+    // FR-005 emit-side: reject if any chain id is unsupported.
+    const unsupportedNetworks = requestedChainIds.filter((c) => !handlers[c])
+    if (unsupportedNetworks.length > 0) {
+      await client.respond({
+        type: BeaconMessageType.Error,
+        id: message.id,
+        errorType: 'NETWORK_NOT_SUPPORTED',
+        unsupportedNetworks,
+      } as any)
+      return
+    }
+    const accounts: Record<string, { publicKey: string }> = {}
+    for (const chainId of requestedChainIds) {
+      accounts[chainId] = await handlers[chainId].onPermission(chainId, publicKey)
+    }
+    await client.respond({ type: BeaconMessageType.PermissionResponse, ..., accounts })
+  }
+
+  if (message.type === BeaconMessageType.OperationRequest) {
+    const chainId =
+      typeof message.network === 'string'
+        ? (message.network.startsWith('tezos:') ? message.network : `tezos:${message.network}`)
+        : `tezos:${(message.network as any).chainId ?? 'NetXsqzbfFenSTS'}`
+    const handler = handlers[chainId]
+    if (!handler) {
+      await client.respond({
+        type: BeaconMessageType.Error,
+        id: message.id,
+        errorType: 'NETWORK_NOT_SUPPORTED',
+        unsupportedNetworks: [chainId],
+      } as any)
+      return
+    }
+    const hash = await handler.executeOps(signer, message.operationDetails)
+    await client.respond({ type: BeaconMessageType.OperationResponse, id: message.id, transactionHash: hash })
+  }
+})
+```
+
+**Why this shape.** A dispatch table is grep-able, testable per chain in isolation, and adds a new blockchain in one entry without touching the SDK. The `if (chainId === ...)` chain that wallet integrators tend to grow inline is replaced by a lookup, which preserves the spec 002 "no field-presence detection" guarantee on the routing path.
+
+**Reference implementation.** Both reference wallets in this repo (`wallet/src/index.ts` and `wc2/wallet/src/main.ts`) follow this pattern after spec 003 lands. See the [`feat/peer-version-handshake`](https://github.com/trilitech/octez.connect/tree/feat/peer-version-handshake) branch for the SDK delta they consume.
+
+**This pattern is documentary, not SDK-enforced.** The wallet SDK does not impose this shape — integrators are free to dispatch differently as long as constitution Principles I (backward compat) and IV (reference parity) hold.
+
+---
+
 ## 4. Backward compatibility matrix
 
 **Routing key.** All matrix cells below are determined by the value of
@@ -460,6 +542,8 @@ version field is introduced by this protocol revision.
 | `'3'` (legacy single-chain dApp) | `'4'` (upgraded wallet) | Wallet MUST serve at `'3'` — backward compat is mandatory, not policy. Existing dApps need no change. |
 | `'4'` (multi-chain dApp) | `'4'` (upgraded wallet) | Multi-chain session. Wallet reads `req.networks`; returns `accounts` map. |
 | `'4'` (multi-chain dApp) | `'3'` (unupgraded wallet) | Wallet behaves as legacy (no code change possible). dApp-side SDK detects the mismatch from `walletResponse.version` and raises `VersionUnsupportedBeaconError`. |
+| `'4'` multi-network dApp asking ≥ 2 networks | `'4'` wallet that doesn't fan out accounts | Spec 003 FR-019 defensive. dApp-side SDK detects the missing `accounts[]` map after a `>= 2` `networks[]` request and raises `NetworksUnsupportedBeaconError` with `unsupportedNetworks` populated from the set difference. No partial session is created. |
+| `'4'` multi-network dApp | `'4'` wallet that doesn't support every requested chain | Spec 003 FR-005 emit-side. Wallet emits a wire-level error response with `errorType: 'NETWORK_NOT_SUPPORTED'` + `unsupportedNetworks: string[]`. dApp SDK materializes this as `NetworksUnsupportedBeaconError`. Whole-request rejection — no partial fulfillment. |
 
 ### Conformance rules
 
@@ -468,6 +552,8 @@ version field is introduced by this protocol revision.
 - **C3.** A dApp SDK MUST stamp every outgoing pairing payload and message with its build-time `BEACON_VERSION`.
 - **C4.** Comparison MUST be numeric integer comparison (`Number(a) >= Number(b)`). String-lexicographic comparison is forbidden (would mis-order `'10'` vs `'4'` at future revisions).
 - **C5.** No participant may invent a sibling version-equivalent field (capabilities, protocolFlavor, tier, …) to bypass the `peer.version` routing key.
+- **C6 (spec 003).** A wallet that cannot serve every chain id in `permission_request.networks[]` MUST reject the whole request with `errorType: 'NETWORK_NOT_SUPPORTED'` + `unsupportedNetworks: string[]`. Partial fulfillment (returning a smaller `accounts[]` map) is forbidden — it would create ambiguous session state. See spec 003 FR-005 + contracts/networks-unsupported-error.md F1.
+- **C7 (spec 003).** A dApp issuing `requestOperation` on a session with ≥ 2 networks MUST pass an explicit `network: <CAIP-2>` argument. The SDK rejects an omitted argument with `NetworksUnsupportedBeaconError`. Single-network sessions remain backward compatible: omitted `network` uses the session's only chain id.
 
 ### Detection on the dApp side
 

@@ -13,7 +13,12 @@
     "test:pv-wallet-matrix": "tsx test/phase-version-negotiation/wallet-routing-matrix-p2p.ts && tsx test/phase-version-negotiation/wallet-routing-matrix-walletconnect.ts && playwright test test/phase-version-negotiation/wallet-routing-matrix-postmessage.spec.ts",
     "test:pv-dapp-matrix": "tsx test/phase-version-negotiation/dapp-detection-matrix-p2p.ts && tsx test/phase-version-negotiation/dapp-detection-matrix-walletconnect.ts && playwright test test/phase-version-negotiation/dapp-detection-matrix-postmessage.spec.ts",
     "test:pv-forward": "tsx test/phase-version-negotiation/forward-extensibility-matrix-p2p.ts && tsx test/phase-version-negotiation/forward-extensibility-matrix-walletconnect.ts && playwright test test/phase-version-negotiation/forward-extensibility-matrix-postmessage.spec.ts",
-    "test:pv-all": "npm run test:pv-wallet-matrix && npm run test:pv-dapp-matrix && npm run test:pv-forward"
+    "test:pv-all": "npm run test:pv-wallet-matrix && npm run test:pv-dapp-matrix && npm run test:pv-forward",
+    "test:mn-p2p": "tsx test/phase-multi-network/multi-network-operation-p2p.ts",
+    "test:mn-wc2": "tsx test/phase-multi-network/multi-network-operation-walletconnect.ts",
+    "test:mn-popup": "playwright test test/phase-multi-network/multi-network-operation-postmessage.spec.ts",
+    "test:mn-fr019": "tsx test/phase-multi-network/multi-network-fr019-defensive.ts",
+    "test:mn-all": "npm run test:mn-p2p && npm run test:mn-wc2 && npm run test:mn-popup && npm run test:mn-fr019"
   },
   "devDependencies": {
     "@playwright/test": "^1.59.1",
