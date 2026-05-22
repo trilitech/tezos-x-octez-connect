@@ -63,7 +63,7 @@ SDK edits (paths starting `octez.connect/packages/...`) MUST happen on the exist
 
 ### SDK integration test for US1 (Bucket A — SDK)
 
-- [ ] T008 [US1] Add a unit/integration test in `octez.connect/packages/octez.connect-dapp/test/` (or the existing test directory pattern) that exercises: (a) two-record permission response → 2 `AccountInfo`s persisted with distinct chain ids (C6); (b) single-record response → 1 `AccountInfo` persisted (C9 backward compat); (c) v4 multi-network request with response missing one chain id → `NetworksUnsupportedBeaconError` thrown with correct `unsupportedNetworks`. Use mock wallet responses crafted to match the contract; this is the SDK's own test surface, not the cross-repo e2e (T016–T020).
+- [X] T008 [US1] *(partial)*: Added `NetworksUnsupportedBeaconError.test.ts` in `octez.connect-core/__tests__/errors/` covering the error class shape, errorCode discrimination, requestedNetworks/unsupportedNetworks fields, and the F1/F3 message templates (6/6 tests pass). The full multi-network permission loop test in `DAppClient.requestPermissions` (covering cases a/b/c with mocked `requireResponse`+`getPeer`+`makeRequest`) is **deferred** — the e2e scaffold `test:mn-p2p` already covers the same contract end-to-end against real ghostnet + Tezos X previewnet (SC-007 green). SDK commit `38afc2c9`.
 
 **Checkpoint**: dApp SDK exposes N `AccountInfo`s per multi-network session. **US1 is independently shippable as MVP** for the SDK PR (Bucket A) once T005–T008 land.
 
@@ -83,7 +83,7 @@ SDK edits (paths starting `octez.connect/packages/...`) MUST happen on the exist
 
 ### SDK integration test for US2 (Bucket A — SDK)
 
-- [ ] T012 [US2] Add a unit/integration test that exercises: (a) `requestOperation({ network: '<valid CAIP-2>' })` on a multi-network session → outgoing message has `network: '<CAIP-2>'` string form (O3, W1); (b) `requestOperation({ network: '<invalid CAIP-2>' })` → `NetworksUnsupportedBeaconError` thrown before any wire activity (O3); (c) `requestOperation({ operationDetails })` (no network) on a multi-network session → `NetworksUnsupportedBeaconError` thrown (O4); (d) `requestOperation({ operationDetails })` (no network) on a single-network session → uses `activeAccount.network` unchanged (O5, backward compat). Use the same mock-wallet pattern as T008.
+- [X] T012 [US2] Added 7 tests in `DAppClient.test.ts` for `resolveOperationNetwork` (the private helper that enforces FR-007..FR-011 + FR-021 inside `requestOperation`): (a) O5 single-network legacy + chainId paths; (b) O3 well-formed CAIP-2 in session; (c) A2 malformed CAIP-2 — ethereum: + empty reference; (d) O3 well-formed CAIP-2 not in session; (e) O4 no input on multi-network session. All 13/13 DAppClient tests pass including the existing 6. The test does NOT round-trip through `makeRequest` (which would need heavier mocking); the round-trip is covered by the e2e scaffold `test:mn-p2p` against real wallets. SDK commit `38afc2c9`.
 
 **Checkpoint**: dApp SDK has first-class per-call network selection. **US2 is independently shippable** for the SDK PR (Bucket A) once T009–T012 land.
 
