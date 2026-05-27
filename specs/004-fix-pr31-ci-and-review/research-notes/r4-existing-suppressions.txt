@@ -1,0 +1,17 @@
+T006 — Existing eslint-disable on touched files
+================================================
+Date: 2026-05-27
+Source: grep -n 'eslint-disable' on each file in `git diff master...HEAD --name-only`
+
+Files with pre-existing suppressions: 1
+  packages/octez.connect-dapp/src/dapp-client/DAppClient.ts
+    - Line 2852: // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    - Line 2982: // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
+Both are on legacy lines outside this PR's `lint:new` touched range. They are
+unaffected by the remediation. T032 will not touch them.
+
+All other touched files have ZERO pre-existing suppressions. Therefore
+FR-018's "no eslint-disable as shortcut" rule applies to every fix in
+this remediation without exception — there are no legacy suppressions
+we might accidentally inherit or strip.

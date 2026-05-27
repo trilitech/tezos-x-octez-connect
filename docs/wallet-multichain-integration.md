@@ -641,3 +641,64 @@ Validated transports:
 | Popup (`tzip10-popup`) | ✓ validated | `test/phase6.ts` (Playwright) |
 
 Chains tested: Shadownet L1 (`tezos:NetXsqzbfFenSTS`) + Michelson interface (`tezos:NetXY2oPPzkxUW1`).
+
+---
+
+## 6. Error surface — dApp-observable errors during upgrade
+
+The following SDK-internal errors are surfaced to dApp integrators during
+the v4 protocol rollout. None of them cross the wire; all are thrown by
+the dApp-side SDK only.
+
+### `VersionUnsupportedBeaconError`
+
+Thrown when a paired wallet's persisted `peer.version` is below the dApp's
+declared `requiredMinimumVersion`. Carries `requiredMinimumVersion` and
+`walletServedVersion`. Resolution: ask the user to upgrade the wallet.
+
+### `NetworksUnsupportedBeaconError`
+
+Thrown when a `requestPermissions({ networks: […] })` call asks for ≥ 2
+networks and the v4 wallet responds without an `accounts[]` fanout
+(or for `requestOperation({ network })` calls targeting a chain id not in
+the session). Carries `requestedNetworks` and `unsupportedNetworks`.
+Resolution: prompt the user to re-pair with a wallet that supports all
+requested chains.
+
+### `InvalidBeaconVersionError` (spec 004 / PR #31 remediation)
+
+Thrown by `compareBeaconVersion()` (used internally by the routing and
+version-gating helpers) when a `peer.version` operand fails strict
+decimal-integer validation — non-string types, leading sign, leading
+zeros, decimal points, exponent notation, whitespace, or hex prefix.
+
+Catch sites: the wallet's `IncomingRequestInterceptor` catches this and
+routes the message via the legacy branch (with a `logger.warn` for
+forensics). The dApp's version-gating helpers let it propagate — at the
+dApp layer, the input comes from the persisted `PeerManager` record, so
+a malformed value indicates corruption worth surfacing.
+
+### `StalePermissionSchemeError` (spec 004 / PR #31 remediation)
+
+Thrown by `PermissionValidator` when a v4 Tezos `OperationRequest`
+cannot resolve against any persisted `PermissionInfo` by the new
+`accountIdentifier` scheme, but a record matching the same
+`(address, chainId)` pair exists under an older scheme. Carries
+`address`, `chainId`, and `nextStep` (a user-facing remediation message).
+
+**Why integrators may see this:** before PR #31, the Tezos SDK derived
+multi-network `accountId` values via the now-deprecated
+`${publicKey}-${chainId}` scheme, which did not match the
+`getAccountIdentifier(address, network)` scheme used by
+`PermissionValidator` for lookup. A dApp that paired under a pre-PR-#31
+SDK has on-disk permission records keyed under the broken scheme. The
+new SDK detects this scheme-agnostically and surfaces a clear typed
+error rather than a generic `MissingPermissionError`.
+
+**Resolution:** re-pair the dApp with the wallet. The new pairing
+materialises `PermissionInfo` under the corrected scheme, and the error
+will not re-fire for that account.
+
+No automatic migration is performed — the v4 audience before PR #31
+remediation was internal-only (the `feat/peer-version-handshake`
+branch demo), so a clean re-pair is the safest upgrade path.

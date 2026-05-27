@@ -1,0 +1,33 @@
+T005 — compareBeaconVersion call-site survey
+=============================================
+Date: 2026-05-27
+Source: grep -rn "compareBeaconVersion" octez.connect/packages/ --include='*.ts'
+
+Production call sites (3 total):
+
+1. packages/octez.connect-dapp/src/dapp-client/DAppClient.ts:184
+   Context: resolveRequiredMinimumVersion() — guards against integrator-supplied
+   requiredMinimumVersion exceeding the SDK's own BEACON_VERSION.
+   Decision per Clarifications session Q1: LET IT PROPAGATE.
+   The input here is the developer-supplied requiredMinimumVersion option,
+   not an envelope value. Malformed should already have been caught by
+   InvalidRequiredMinimumVersionError; this is defence in depth.
+
+2. packages/octez.connect-dapp/src/dapp-client/DAppClient.ts:2600
+   Context: assertWalletVersionMeetsMinimum() — compares the persisted peer
+   peer.version against the resolved requiredMinimumVersion.
+   Decision: LET IT PROPAGATE.
+   The peer.version here is sourced from PeerManager (the persisted
+   pairing record). A malformed value indicates a corrupted local
+   storage entry — surfacing is desired.
+
+3. packages/octez.connect-wallet/src/interceptors/IncomingRequestInterceptor.ts:86
+   Context: intercept() — single-branch routing on the OUTER envelope
+   peer.version.
+   Decision: WRAP IN TRY/CATCH + LOGGER.WARN (FR-005, T020).
+   This is the untrusted-input path. A hostile peer can stamp any string
+   here. Catch, warn-log, treat as below v4 threshold.
+
+Test files (none currently exercise compareBeaconVersion directly).
+Action: T019 creates packages/octez.connect-core/__tests__/utils/message-utils.test.ts
+with the 17-row matrix from contracts/compare-beacon-version.md.

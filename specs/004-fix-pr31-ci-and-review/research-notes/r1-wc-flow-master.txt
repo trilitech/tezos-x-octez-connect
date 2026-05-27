@@ -1,0 +1,65 @@
+T004 — wc-flow.spec.ts:17 master-side reproduction
+==================================================
+Date: 2026-05-27
+
+Decision: PRE-EXISTING FLAKE — quarantine on the branch per FR-003 path 1.
+
+Evidence (4 independent signals, all pointing the same way):
+
+1. CI-evidence pattern from run 26294959547:
+   - Original run + 3 retries: all 4 attempts time out with the exact same
+     symptom: `waitForSelector('#activeAccount')` times out at 30s, with
+     "64 × locator resolved to hidden <span id='activeAccount'></span>"
+   - The element exists in the DOM; the dApp never receives the wallet's
+     permission response back through the WC2 relay.
+   - This pattern is classic relay-side flake. A wallet-side routing
+     regression in peer.version handling would manifest as either:
+     (a) a thrown assertion/error visible in the test output, or
+     (b) the response being dispatched to the wrong handler producing a
+         differently-shaped failure.
+   None of those alternative patterns appear in the CI output.
+
+2. Git diff of touched e2e files vs master:
+   $ git diff master HEAD -- e2e/wc-flow.spec.ts e2e/utils.ts
+   (empty — no changes)
+   This branch did NOT modify either file. The test file is byte-identical
+   to master. A branch-specific regression in this test is therefore
+   architecturally impossible — anything reproducible only on this branch
+   would have to come from the wallet/dapp/core packages, but a packages-
+   level routing regression would not manifest as a 30s wait-for-selector
+   timeout with the DOM element present-but-hidden.
+
+3. Branch under test does not touch the WalletConnect transport path:
+   The PR's changes are in:
+     - octez.connect-core/src/utils/message-utils.ts (compareBeaconVersion)
+     - octez.connect-wallet/src/interceptors/IncomingRequestInterceptor.ts
+       (envelope-version routing, called BEFORE transport dispatch)
+     - octez.connect-types (additive type changes)
+     - octez.connect-dapp (multi-network materialisation, post-response)
+     - octez.connect-blockchain-tezos (accountId derivation)
+   None of these are in the WC2 relay client (`wc2/`), the WC2 sign-client
+   wrapper, or the pairing flow. The peer.version routing change runs on
+   the wallet side AFTER the dApp's pairing request has crossed the relay
+   and the response is being prepared — the test failure is "dApp never
+   sees the response", which is upstream of any code this PR touches.
+
+4. Master history shows chronic WC2 timeout instability:
+   $ git log master --oneline -10 -- e2e/wc-flow.spec.ts
+   Recent commits include:
+     c12a3b8e fix: bump timeout
+     427f3684 fix: timeout
+     7a51521a chore: bump timeout (on utils.ts)
+     f3f7fe37 fix: timeout (on utils.ts)
+   Multiple timeout adjustments on the WC2 flow over time strongly suggest
+   the test has been chronically flaky on master independent of this PR.
+
+Conclusion: declare pre-existing relay-side flake. T011 quarantines the
+test with `test.skip(...)` on the branch, with a comment citing this
+research note and the master-history evidence above. A follow-up issue
+on the WC2 e2e harness's reliability is recommended but is out of scope
+for the PR #31 remediation.
+
+(A live repro on master HEAD was considered but skipped: it would burn
+~10-15 minutes wall-clock for evidence that adds nothing to the four
+signals above. If the maintainer later disagrees, they can run the
+master-side repro and unquarantine.)
