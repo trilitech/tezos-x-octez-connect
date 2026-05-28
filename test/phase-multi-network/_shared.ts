@@ -92,10 +92,15 @@ export async function runMultiNetworkMatrix(transport: Transport, _pairHook?: ()
     ],
   })
 
-  // Step 2: fetch the pairing URI and hand it to the wallet.
-  const uri = (await get(`${DAPP_URL}/pairing-uri`)) as string
-  assert(uri && uri.length > 10, `invalid pairing URI: ${uri}`)
-  await post(`${WALLET_URL}/connect`, uri)
+  // Step 2: pair via the transport-specific hook if provided, or fall back
+  // to the default /pairing-uri → /connect flow.
+  if (_pairHook) {
+    await _pairHook()
+  } else {
+    const uri = (await get(`${DAPP_URL}/pairing-uri`)) as string
+    assert(uri && uri.length > 10, `invalid pairing URI: ${uri}`)
+    await post(`${WALLET_URL}/connect`, uri)
+  }
 
   // Step 3: poll /last-permission until accounts map arrives.
   let perm: any = null
@@ -147,16 +152,19 @@ export async function runFr019DefensiveCell(transport: Transport, pair: () => Pr
   await post(`${WALLET_URL}/test-config`, { beaconVersion: '4', suppressAccountsFanout: true })
   await post(`${DAPP_URL}/reset`, {}).catch(() => {})
 
+  let caught = false
+  // Start the permission flow without awaiting so pairing can happen concurrently.
+  const permissionPromise = post(`${DAPP_URL}/request-permissions`, {
+    networks: [
+      { chainId: L1_CHAIN, rpcUrl: L1_RPC },
+      { chainId: L2_CHAIN, rpcUrl: L2_RPC },
+    ],
+  })
+
   await pair()
 
-  let caught = false
   try {
-    await post(`${DAPP_URL}/request-permissions`, {
-      networks: [
-        { chainId: L1_CHAIN, rpcUrl: L1_RPC },
-        { chainId: L2_CHAIN, rpcUrl: L2_RPC },
-      ],
-    })
+    await permissionPromise
   } catch {
     caught = true
   }

@@ -166,16 +166,16 @@ async function executeL2Ops(
     gasLimit: Math.max(Math.ceil((estimates[i]?.gasLimit ?? 1000) * 3), 5000),
     storageLimit: Math.max(estimates[i]?.storageLimit ?? 257, 300),
   }))
-  const result = await tezos.contract.batch(opsWithFees).send()
-
   const addr = await signer.publicKeyHash()
   const counterBefore = await tezos.rpc
     .getContract(addr, { block: 'head' })
     .then((r) => parseInt(String((r as any).counter ?? -1), 10))
     .catch(() => -1)
+
+  const result = await tezos.contract.batch(opsWithFees).send()
+
   if (counterBefore >= 0) {
     await new Promise<void>((resolve) => {
-      const deadline = setTimeout(resolve, 60_000)
       const poll = setInterval(async () => {
         const c = await tezos.rpc
           .getContract(addr, { block: 'head' })
@@ -183,6 +183,7 @@ async function executeL2Ops(
           .catch(() => counterBefore)
         if (c > counterBefore) { clearInterval(poll); clearTimeout(deadline); resolve() }
       }, 3_000)
+      const deadline = setTimeout(() => { clearInterval(poll); resolve() }, 60_000)
     })
   }
   return result.hash
@@ -349,13 +350,14 @@ async function main(): Promise<void> {
         // `accounts[]` is constructed.
         const incomingNetworks: any[] = (message as any).networks ?? []
         networkRegistry = {}
-        const requestedChainIds: string[] = []
+        const seenChainIds = new Set<string>()
         for (const net of incomingNetworks) {
           const raw: string = net.chainId ?? ''
           const chainId = raw.startsWith('tezos:') ? raw : `tezos:${raw}`
-          requestedChainIds.push(chainId)
+          seenChainIds.add(chainId)
           if (net.rpcUrl) networkRegistry[chainId] = net.rpcUrl
         }
+        const requestedChainIds = [...seenChainIds]
         const unsupportedNetworks = requestedChainIds.filter((c) => !handlers[c])
         if (unsupportedNetworks.length > 0) {
           console.log(`[wallet] rejecting permission_request: unsupported networks ${unsupportedNetworks.join(', ')}`)
