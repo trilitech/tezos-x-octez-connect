@@ -25,6 +25,7 @@ import { MemoryStorage } from './storage'
 const PORT = parseInt(process.env.PORT ?? '5174')
 
 const WC2_PROJECT_ID = 'fb4d4407a8fe167d79bd14b5afcc7230'
+const L1_CHAIN  = 'tezos:NetXsqzbfFenSTS'
 const L2_CHAIN  = 'tezos:NetXY2oPPzkxUW1'
 const L1_RPC    = 'https://rpc.shadownet.teztnets.com'
 const L2_RPC    = 'https://michelson.previewnet.tezosx.nomadic-labs.com'
@@ -109,56 +110,109 @@ function rpcForChain(chainId: string): string {
   return chainId === L2_CHAIN ? L2_RPC : L1_RPC
 }
 
-async function executeOps(
+// Spec 003 multi-network protocol — recommended integrator dispatch pattern.
+// Per-blockchain logic is bundled into a handlers table keyed by CAIP-2 chain id.
+// The dispatch decision is `handlers[chainId]` lookup; the chain-id-based
+// branching that used to be inline (`if (chainId === L2)`, `if (isL2)`) is
+// pushed into per-handler implementations of `executeOps` and `onPermission`.
+//
+// See specs/003-multi-network-protocol/data-model.md "Integrator Dispatch
+// Pattern" for the prescribed shape.
+
+type BlockchainHandlerBundle = {
+  rpcUrl: string
+  onPermission: (chainId: string, publicKey: string) => Promise<{ publicKey: string }>
+  executeOps: (signer: InMemorySigner, operations: any[]) => Promise<string>
+}
+
+function normalizeOps(operations: any[]): any[] {
+  return operations.map((op: any) => {
+    if (op.kind === 'transaction') {
+      return { kind: 'transaction' as const, to: op.destination, amount: parseInt(op.amount, 10), mutez: true }
+    }
+    return op
+  })
+}
+
+async function executeL1Ops(
   signer: InMemorySigner,
   rpcUrl: string,
   operations: any[],
 ): Promise<string> {
   const tezos = new TezosToolkit(rpcUrl)
   tezos.setSignerProvider(signer)
+  const ops = normalizeOps(operations)
+  const result = await tezos.contract.batch(ops).send()
+  return result.hash
+}
 
-  const isL2 = rpcUrl.includes('txpark') || rpcUrl.includes('tezlink') || rpcUrl.includes('michelson.previewnet.tezosx')
-  const ops = operations.map((op: any) => {
-    if (op.kind === 'transaction') {
-      return { kind: 'transaction' as const, to: op.destination, amount: parseInt(op.amount, 10), mutez: true }
-    }
-    return op
-  })
+async function executeL2Ops(
+  signer: InMemorySigner,
+  rpcUrl: string,
+  operations: any[],
+): Promise<string> {
+  // Tezos X L2 (Michelson interface protocol PtTALL…) needs explicit fee
+  // estimation with safety margins because Taquito 24.2.0 underestimates,
+  // and counter-based inclusion polling because blocks/{id}/operations is
+  // not exposed.
+  const tezos = new TezosToolkit(rpcUrl)
+  tezos.setSignerProvider(signer)
+  const ops = normalizeOps(operations)
 
-  if (isL2) {
-    const estimates = await tezos.estimate.batch(ops)
-    const opsWithFees = ops.map((op: any, i: number) => ({
-      ...op,
-      // ×2 fee, ×3 gas, ×2 storage safety margin: Taquito 24.2.0 underestimates
-      // on the Tezos X previewnet (Michelson protocol PtTALL…).
-      fee: Math.ceil((estimates[i]?.suggestedFeeMutez ?? 0) * 2) + 100,
-      gasLimit: Math.max(Math.ceil((estimates[i]?.gasLimit ?? 1000) * 3), 5000),
-      storageLimit: Math.max(estimates[i]?.storageLimit ?? 257, 300),
-    }))
-    const result = await tezos.contract.batch(opsWithFees).send()
+  const estimates = await tezos.estimate.batch(ops)
+  const opsWithFees = ops.map((op: any, i: number) => ({
+    ...op,
+    fee: Math.ceil((estimates[i]?.suggestedFeeMutez ?? 0) * 2) + 100,
+    gasLimit: Math.max(Math.ceil((estimates[i]?.gasLimit ?? 1000) * 3), 5000),
+    storageLimit: Math.max(estimates[i]?.storageLimit ?? 257, 300),
+  }))
+  const addr = await signer.publicKeyHash()
+  const counterBefore = await tezos.rpc
+    .getContract(addr, { block: 'head' })
+    .then((r) => parseInt(String((r as any).counter ?? -1), 10))
+    .catch(() => -1)
 
-    const addr = await signer.publicKeyHash()
-    const counterBefore = await tezos.rpc
-      .getContract(addr, { block: 'head' })
-      .then((r) => parseInt(String((r as any).counter ?? -1), 10))
-      .catch(() => -1)
-    if (counterBefore >= 0) {
-      await new Promise<void>((resolve) => {
-        const deadline = setTimeout(resolve, 60_000)
-        const poll = setInterval(async () => {
-          const c = await tezos.rpc
-            .getContract(addr, { block: 'head' })
-            .then((r) => parseInt(String((r as any).counter ?? 0), 10))
-            .catch(() => counterBefore)
-          if (c > counterBefore) { clearInterval(poll); clearTimeout(deadline); resolve() }
-        }, 3_000)
-      })
-    }
-    return result.hash
-  } else {
-    const result = await tezos.contract.batch(ops).send()
-    return result.hash
+  const result = await tezos.contract.batch(opsWithFees).send()
+
+  if (counterBefore >= 0) {
+    await new Promise<void>((resolve) => {
+      const poll = setInterval(async () => {
+        const c = await tezos.rpc
+          .getContract(addr, { block: 'head' })
+          .then((r) => parseInt(String((r as any).counter ?? 0), 10))
+          .catch(() => counterBefore)
+        if (c > counterBefore) { clearInterval(poll); clearTimeout(deadline); resolve() }
+      }, 3_000)
+      const deadline = setTimeout(() => { clearInterval(poll); resolve() }, 60_000)
+    })
   }
+  return result.hash
+}
+
+function buildBlockchainHandlers(): Record<string, BlockchainHandlerBundle> {
+  return {
+    [L1_CHAIN]: {
+      rpcUrl: L1_RPC,
+      onPermission: async (_chainId, publicKey) => ({ publicKey }),
+      executeOps: (signer, ops) => executeL1Ops(signer, networkRegistry[L1_CHAIN] ?? L1_RPC, ops),
+    },
+    [L2_CHAIN]: {
+      rpcUrl: L2_RPC,
+      onPermission: async (_chainId, publicKey) => ({ publicKey }),
+      executeOps: (signer, ops) => executeL2Ops(signer, networkRegistry[L2_CHAIN] ?? L2_RPC, ops),
+    },
+  }
+}
+
+// Legacy thin shim: WC2 transport path still routes by RPC URL substring.
+// Preserved for the existing WC2 e2e flow; the spec 003 dispatch lives below.
+async function executeOps(
+  signer: InMemorySigner,
+  rpcUrl: string,
+  operations: any[],
+): Promise<string> {
+  const isL2 = rpcUrl.includes('txpark') || rpcUrl.includes('tezlink') || rpcUrl.includes('michelson.previewnet.tezosx')
+  return isL2 ? executeL2Ops(signer, rpcUrl, operations) : executeL1Ops(signer, rpcUrl, operations)
 }
 
 async function initWC2(signer: InMemorySigner): Promise<void> {
@@ -245,6 +299,9 @@ async function main(): Promise<void> {
   })
   await client.init()
 
+  // Spec 003: per-blockchain dispatch table for permission + operation handlers.
+  const handlers = buildBlockchainHandlers()
+
   await client.connect(async (message) => {
     // Test-only: mutate the incoming version to simulate an unupgraded
     // wallet. The SDK's OutgoingResponseInterceptor mirrors
@@ -285,24 +342,46 @@ async function main(): Promise<void> {
       console.log(`[wallet] permission_request received: peerVersion=${peerVersionStr} (from ${matchingPeer ? 'peerManager' : 'envelope'}), innerVersion=${(message as any).version}, isMultiNetwork=${isMultiNetwork}, networks=${JSON.stringify((message as any).networks)}`)
 
       if (isMultiNetwork) {
-        // Multi-network handler — networks[] is guaranteed to be the
-        // mode-carrying field on the v4 path; treat its absence as a
-        // protocol error from the dApp side (still no field-presence
-        // version detection — we're past that point).
+        // Spec 003 multi-network handler — dispatch through the per-blockchain
+        // handlers table. Build the rpc registry from `networks[]` first, then
+        // invoke `onPermission` for every chain the wallet can serve. Chains the
+        // wallet does not know are simply omitted from `accounts[]` (partial
+        // fulfillment): the wallet returns the served subset and lets the dApp
+        // decide whether that subset is enough for its flow (spec 003 FR-005,
+        // revised 2026-06-01 per review — the wallet no longer arbitrates which
+        // networks are mandatory; that's dApp policy). The unsupported chain ids
+        // are echoed back as OPTIONAL advisory `unsupportedNetworks` metadata —
+        // the information, without the decision — so the dApp can show precise
+        // user-facing messaging.
         const incomingNetworks: any[] = (message as any).networks ?? []
         networkRegistry = {}
-        const accounts: Record<string, { publicKey: string }> = {}
+        const seenChainIds = new Set<string>()
         for (const net of incomingNetworks) {
           const raw: string = net.chainId ?? ''
           const chainId = raw.startsWith('tezos:') ? raw : `tezos:${raw}`
-          accounts[chainId] = { publicKey }
+          seenChainIds.add(chainId)
           if (net.rpcUrl) networkRegistry[chainId] = net.rpcUrl
+        }
+        const requestedChainIds = [...seenChainIds]
+        const supportedChainIds = requestedChainIds.filter((c) => handlers[c])
+        const unsupportedNetworks = requestedChainIds.filter((c) => !handlers[c])
+        const accounts: Record<string, { publicKey: string }> = {}
+        for (const chainId of supportedChainIds) {
+          const handler = handlers[chainId]
+          accounts[chainId] = await handler.onPermission(chainId, publicKey)
+        }
+        if (unsupportedNetworks.length > 0) {
+          console.log(`[wallet] partial permission_response: serving ${supportedChainIds.join(', ') || '(none)'}; unsupported (advisory) ${unsupportedNetworks.join(', ')}`)
         }
         await client.respond({
           type: BeaconMessageType.PermissionResponse,
           id: message.id,
-          publicKey,          // keep for SDK session establishment
-          accounts,           // multi-network account map, keyed by CAIP-2 chainId
+          publicKey,            // keep for SDK session establishment
+          accounts,             // served subset, keyed by CAIP-2 chainId
+          // OPTIONAL advisory metadata — present only when some requested
+          // network could not be served. Carries no decision; the dApp chooses
+          // how to react (graceful degradation vs. surface an error).
+          ...(unsupportedNetworks.length > 0 ? { unsupportedNetworks } : {}),
           network: message.network,
           scopes: message.scopes ?? [PermissionScope.OPERATION_REQUEST],
         } as any)
@@ -317,92 +396,41 @@ async function main(): Promise<void> {
         } as any)
       }
     } else if (message.type === BeaconMessageType.OperationRequest) {
+      // Spec 003: dispatch on the CAIP-2 chain id via the handlers table.
+      // The wire field can be either a CAIP-2 string (v4 multi-network) or
+      // a legacy Network object (v2/v3). Both shapes are normalized to a
+      // chain id BEFORE the handler lookup — no per-handler discrimination
+      // needed downstream.
       const networkField = (message as any).network
-      let rpcUrl: string
       let chainId: string
-
       if (typeof networkField === 'string') {
-        // v3: CAIP-2 string e.g. "tezos:NetXsqzbfFenSTS"
         chainId = networkField.startsWith('tezos:') ? networkField : `tezos:${networkField}`
-        rpcUrl = networkRegistry[chainId] ?? DEFAULT_RPC
       } else {
-        // v2: network object { type, rpcUrl?, chainId? }
         const raw: string = (networkField as any)?.chainId ?? 'NetXsqzbfFenSTS'
         chainId = raw.startsWith('tezos:') ? raw : `tezos:${raw}`
-        rpcUrl = (networkField as any)?.rpcUrl ?? DEFAULT_RPC
       }
 
+      const handler = handlers[chainId]
+      if (!handler) {
+        // FR-005 / spec 003: chain id not in the dispatch table — reject.
+        console.log(`[wallet] rejecting operation_request: unsupported network ${chainId}`)
+        await client.respond({
+          type: BeaconMessageType.Error,
+          id: message.id,
+          errorType: 'NETWORK_NOT_SUPPORTED',
+          unsupportedNetworks: [chainId],
+        } as any)
+        return
+      }
+      const rpcUrl = networkRegistry[chainId] ?? handler.rpcUrl
       lastRpcCall = { chainId, rpcUrl }
 
-      const tezos = new TezosToolkit(rpcUrl)
-      tezos.setSignerProvider(signer)
-
       try {
-        const ops = (message.operationDetails as any[]).map((op) => {
-          if (op.kind === 'transaction') {
-            return {
-              kind: 'transaction' as const,
-              to: op.destination,
-              amount: parseInt(op.amount, 10),
-              mutez: true,
-            }
-          }
-          return op
-        })
-
-        // tezlink (Michelson L2): estimate fees first, then apply 2× safety margin
-        let result: any
-        const isL2 = rpcUrl.includes('txpark') || rpcUrl.includes('tezlink') || rpcUrl.includes('michelson.previewnet.tezosx')
-        if (isL2) {
-          const estimates = await tezos.estimate.batch(ops)
-          const opsWithFees = ops.map((op: any, i: number) => ({
-            ...op,
-            // ×2 fee, ×3 gas, ×2 storage safety margin: Taquito 24.2.0 underestimates
-            // on the Tezos X previewnet (Michelson protocol PtTALL…).
-            fee: Math.ceil((estimates[i]?.suggestedFeeMutez ?? 0) * 2) + 100,
-            gasLimit: Math.max(Math.ceil((estimates[i]?.gasLimit ?? 1000) * 3), 5000),
-            storageLimit: Math.max(estimates[i]?.storageLimit ?? 257, 300),
-          }))
-
-          // Snapshot counter before injection so we can detect inclusion.
-          // The tezlink protocol does not expose operations in blocks/{id}/operations —
-          // the account counter is the only reliable confirmation signal.
-          const senderAddress = await signer.publicKeyHash()
-          const counterBefore = await tezos.rpc
-            .getContract(senderAddress, { block: 'head' })
-            .then((r) => parseInt(String((r as any).counter ?? -1), 10))
-            .catch(() => -1)
-
-          result = await tezos.contract.batch(opsWithFees).send()
-
-          // Wait for the counter to advance past counterBefore — this proves the
-          // operation was included in a tezlink block.  The stream is opened BEFORE
-          // the counter snapshot so we cannot miss the inclusion event; the
-          // counterBefore snapshot then serves as a backfill guard.
-          if (counterBefore >= 0) {
-            await new Promise<void>((resolve) => {
-              const deadline = setTimeout(resolve, 60_000)  // give up after 60 s
-              const poll = setInterval(async () => {
-                try {
-                  const c = await tezos.rpc
-                    .getContract(senderAddress, { block: 'head' })
-                    .then((r) => parseInt(String((r as any).counter ?? 0), 10))
-                  if (c > counterBefore) {
-                    clearInterval(poll)
-                    clearTimeout(deadline)
-                    resolve()
-                  }
-                } catch (_) {}
-              }, 3_000)
-            })
-          }
-        } else {
-          result = await tezos.contract.batch(ops).send()
-        }
+        const hash = await handler.executeOps(signer, message.operationDetails as any[])
         await client.respond({
           type: BeaconMessageType.OperationResponse,
           id: message.id,
-          transactionHash: result.hash,
+          transactionHash: hash,
         } as any)
       } catch (err: any) {
         console.error('[wallet] operation error:', err.message)

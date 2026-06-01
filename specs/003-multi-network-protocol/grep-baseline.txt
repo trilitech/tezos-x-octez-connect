@@ -1,0 +1,32 @@
+# Pre-change baselines for spec 003 (T002)
+# Recorded: 2026-05-21T14:13:48Z
+
+## (client as any).makeRequest in reference dApps
+wc2/dapp/src/main.ts:339:    const orig = (client as any).makeRequest.bind(client)
+wc2/dapp/src/main.ts:340:    ;(client as any).makeRequest = function (req: any, ...args: any[]) {
+wc2/dapp/src/main.ts:349:      ;(client as any).makeRequest = orig
+dapp/src/index.ts:266:      const orig = (client as any).makeRequest.bind(client)
+dapp/src/index.ts:267:      ;(client as any).makeRequest = function (request: any, ...args: any[]) {
+dapp/src/index.ts:271:      restore = () => { ;(client as any).makeRequest = orig }
+
+Count: 6
+
+## partialAccountInfos[0] in DAppClient.ts
+1523:      accountIdentifier: partialAccountInfos[0].accountId,
+1529:      address: partialAccountInfos[0].address, // Store all addresses
+1530:      publicKey: partialAccountInfos[0].publicKey,
+1551:        address: partialAccountInfos[0].address,
+
+Count: 4
+
+## TezosBlockchain stub (accountId: '')
+57:      accountId: '',
+
+Count: 0
+
+## Inline chain-id branching in reference wallets
+wallet/src/index.ts:128:  if (isL2) {
+wallet/src/index.ts:324:      if (typeof networkField === 'string') {
+wallet/src/index.ts:356:        if (isL2) {
+wc2/wallet/src/main.ts:163:  if (isL2) {
+wc2/wallet/src/main.ts:417:      if (typeof networkField === 'string') {
