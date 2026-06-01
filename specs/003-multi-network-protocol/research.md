@@ -5,6 +5,8 @@
 
 ## R1. Error class for FR-005 (wallet cannot serve all requested networks)
 
+> **Revised 2026-06-01.** FR-005 no longer means "wallet rejects the whole request." The wallet now partially fulfills (serves the subset it can, omits the rest); the dApp decides. `NetworksUnsupportedBeaconError` is still the right client-side class — it is now raised by the dApp SDK when the served subset is empty or a v4 wallet returns no fanout at all (FR-019), and the wallet MAY echo an optional advisory `unsupportedNetworks` field on the response. The class shape and rationale below stand unchanged. See spec.md Clarifications Session 2026-06-01.
+
 **Decision**: Add a new client-side error class `NetworksUnsupportedBeaconError` in `octez.connect-core/src/errors/`. Do **not** extend the existing `NetworkNotSupportedBeaconError`.
 
 **Evidence**:
@@ -24,7 +26,7 @@ class NetworksUnsupportedBeaconError extends BeaconError {
 }
 ```
 
-Default message template: `"The wallet cannot serve all requested networks. Unsupported: ${unsupportedNetworks.join(', ')}."`
+Default message template (empty-subset / no-fanout case): `"The wallet cannot serve any of the requested networks: ${unsupportedNetworks.join(', ')}."`
 
 **Rationale**: Reusing `NetworkNotSupportedBeaconError` would require widening its constructor and changing its semantic (singular → plural), which is a backward-incompatible change to a wire-registered error type. Adding a new client-side class follows the spec 002 pattern, costs ~15 lines, and lets the existing class continue to mean "this single network is not supported" for its current use sites (which are mostly wallet-internal validation, not the cross-wire multi-network rejection).
 
@@ -193,18 +195,20 @@ The pattern is **not** SDK-enforced (per Clarifications Q1). The integration gui
 
 1. `peer.version >= '4'` (the wallet declared v4 capability per spec 002), AND
 2. The dApp's request carried `networks.length > 1` (genuinely multi-network), AND
-3. The response's `blockchainData` does not include an `accounts` map (or includes one with fewer entries than `request.networks.length`), AND
+3. The response's `blockchainData` does not include an `accounts` map at all (absent or empty) — i.e. the wallet returned **no** per-network fanout, AND
 4. The dApp's `requiredMinimumVersion` (spec 002 SDK option) was set such that this multi-network response was expected — i.e. the dApp did not explicitly relax to v3.
+
+> **Narrowed 2026-06-01.** Condition 3 previously also fired on a response with "fewer entries than `request.networks.length`." That clause was removed: under the revised FR-005, a non-empty subset is valid partial fulfillment — the wallet served what it could and the dApp decides whether that's enough. FR-019 now fires only on a *completely* absent fanout (a v4 wallet that doesn't understand spec 003 at all). See spec.md Clarifications Session 2026-06-01.
 
 **Evidence**:
 
 - Spec 002 introduced `requiredMinimumVersion` (default = `BEACON_VERSION`). A v4 SDK with no override expects v4 multi-network responses for multi-network requests.
 - The wallet's v4 multi-network response shape (`wallet/src/index.ts:294-305`) populates `accounts: Record<chainId, ...>` with one entry per requested network. A "v4 but no spec 003" wallet would not populate this map.
-- The natural detection point is right after `getAccountInfosFromPermissionResponse()` returns. If R2's Path A returned fewer records than `request.networks.length`, that is the signal — no extra heuristic required.
+- The natural detection point is right after `getAccountInfosFromPermissionResponse()` returns. If R2's Path A returned **zero** records (no fanout at all), that is the signal — no extra heuristic required. A partial-but-non-empty result is a served subset, not a missing-fanout scenario.
 
-**Resulting error**: Raise `NetworksUnsupportedBeaconError` (R1) with `unsupportedNetworks` populated from the set difference `request.networks - response.accounts.keys()`.
+**Resulting error**: Raise `NetworksUnsupportedBeaconError` (R1) with `unsupportedNetworks` populated from the full requested set (the wallet served none).
 
-**Rationale**: Reusing R1's error class keeps the dApp's `catch` block uniform — one error type covers both "wallet rejected multi-network" (FR-005) and "wallet silently ignored multi-network" (FR-019). The four-condition gate prevents false positives in legitimate single-network flows.
+**Rationale**: Reusing R1's error class keeps the dApp's `catch` block uniform — one error type covers both "wallet served none of the requested networks" (FR-005, empty subset) and "wallet silently ignored multi-network entirely" (FR-019, no fanout). The four-condition gate prevents false positives in legitimate single-network flows, and the narrowed condition 3 prevents false positives on valid partial fulfillment.
 
 **Risk to verify in implementation**: The `request.networks.length === 1` case must skip the defensive check (a single-network "request and got back single-network response" is the happy path, not a missing-fanout scenario).
 

@@ -42,7 +42,7 @@
 
 The following choices were made by informed default and are explicitly flagged in the Assumptions section as candidates for `/speckit-clarify` if a stakeholder prefers a different stance:
 
-1. **Whole-request rejection vs. partial fulfillment** when a wallet cannot serve every requested network (FR-005). Default chosen: whole-request rejection, mirroring spec 002's `VersionUnsupportedBeaconError` precedent.
+1. **Whole-request rejection vs. partial fulfillment** when a wallet cannot serve every requested network (FR-005). ~~Default chosen: whole-request rejection, mirroring spec 002's `VersionUnsupportedBeaconError` precedent.~~ **REVISED 2026-06-01 (review feedback):** partial fulfillment with a dApp-side decision. The wallet serves the subset it can and omits the rest (optionally advertising `unsupportedNetworks`); the dApp decides if the subset suffices. See Clarifications Session 2026-06-01 in spec.md.
 2. **Single session with N networks vs. N parallel sessions per pairing**. Default chosen: single session.
 3. **Tezos-family-only v1 scope vs. opening CAIP-2 namespace to non-Tezos chains**. Default chosen: Tezos-family only for v1; non-Tezos chains are future work.
 

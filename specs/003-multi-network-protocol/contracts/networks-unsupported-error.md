@@ -32,24 +32,26 @@ class NetworksUnsupportedBeaconError extends BeaconError {
 
 ### Default message templates
 
-- **FR-005 path**: `"The wallet cannot serve all requested networks. Unsupported: ${unsupportedNetworks.join(', ')}."`
+- **FR-005 path** (empty served subset — F1): `"The wallet cannot serve any of the requested networks: ${unsupportedNetworks.join(', ')}."` (A non-empty subset is partial fulfillment and does not raise — see "When NOT raised".)
 - **FR-009 path** (operation targeting an unauthorized network): `"The requested network ${unsupportedNetworks[0]} is not in the current session. Available: ${authorizedNetworks.join(', ')}."`
 - **FR-010 path** (operation with no network argument on a multi-network session): `"Multiple networks are available in this session (${authorizedNetworks.join(', ')}). Specify a network argument on requestOperation."` In this path, `requestedNetworks` is empty and `unsupportedNetworks` is empty; the caller distinguishes by checking `requestedNetworks.length === 0`.
-- **FR-019 path** (v4 wallet missing accounts[] fanout): `"The wallet's response is missing accounts for ${unsupportedNetworks.length} of the ${requestedNetworks.length} requested networks. The wallet may not support spec 003 multi-network fanout."`
+- **FR-019 path** (v4 wallet returns no accounts[] fanout at all): `"The wallet's response carries no per-network accounts for the ${requestedNetworks.length} requested networks. The wallet declares v4 but may not support spec 003 multi-network fanout."`
 
 ## When raised
 
 The dApp-side SDK MUST raise this error in any of these conditions:
 
-### F1 — Wallet rejected with unsupported networks (FR-005)
+### F1 — Wallet served none of the requested networks (FR-005, revised 2026-06-01)
 
 1. A `requestPermissions({ networks: [...] })` call has been sent, AND
-2. The wallet's response indicates it cannot serve one or more of the requested networks — either through a structured rejection field, or through C8 detection (response's `accounts` map has fewer entries than requested).
+2. The wallet's response carries an **empty** served subset — `accounts` is present but has zero entries that match the requested networks (the wallet understands fanout but could serve none of them).
 
 In this case:
 - `requestedNetworks` = the dApp's original request list
-- `unsupportedNetworks` = the set difference `requestedNetworks − wallet.canServe`
+- `unsupportedNetworks` = the full requested set (nothing could be served)
 - No `AccountInfo` records are added; no session is created.
+
+> **Not F1: partial fulfillment.** If the wallet serves a *non-empty* subset (some but not all requested networks), this is valid partial fulfillment per FR-005 — the SDK persists the served accounts and does NOT raise. The dApp inspects `getAccounts()` (and any advisory `unsupportedNetworks` on the response) and decides whether the subset is enough. The decision is the dApp's, not the wallet's.
 
 ### F2 — Operation targets a network not in session (FR-009)
 
@@ -71,53 +73,67 @@ In this case:
 - `unsupportedNetworks` = `[]`
 - The caller distinguishes this path by checking `requestedNetworks.length === 0` plus the message text.
 
-### F4 — Defensive: v4 wallet response missing `accounts[]` fanout (FR-019)
+### F4 — Defensive: v4 wallet response carries no `accounts[]` fanout at all (FR-019)
 
 1. `requestPermissions({ networks: [...] })` with `networks.length >= 2` was sent, AND
 2. `peer.version >= '4'` (the wallet declared v4 capability), AND
-3. The response's `blockchainData.accounts` is absent OR has fewer entries than `request.networks.length`, AND
+3. The response's `blockchainData.accounts` is **absent or empty** (the wallet advertises v4 on the wire but does not understand spec-003 multi-network fanout — a genuine capability gap), AND
 4. `requiredMinimumVersion >= '4'` (the dApp did not explicitly relax to v3; spec 002).
 
 In this case:
 - `requestedNetworks` = the dApp's original list
-- `unsupportedNetworks` = `request.networks − response.accounts.keys()` (set difference)
+- `unsupportedNetworks` = the full requested set
 - No `AccountInfo` records are added.
+
+> **Narrowed 2026-06-01.** Condition 3 previously also fired on "fewer entries than requested." That clause was removed: a non-empty subset is now valid partial fulfillment (FR-005), not a capability gap. F4 fires only when there is *no* served fanout at all.
 
 ## When NOT raised
 
+- **Partial fulfillment (FR-005).** A multi-network request receives a response whose `accounts` map covers a *non-empty subset* of the requested networks → the SDK persists the served accounts and surfaces any advisory `unsupportedNetworks`. No error is raised; the dApp decides whether the subset is sufficient. The error fires only when the served subset is **empty** (F1) or there is **no fanout at all** (F4).
 - A single-network request (or no `networks[]`) receives a single-network response → use the existing single-network path. No `NetworksUnsupportedBeaconError`.
 - A v3 wallet responds to a v3 dApp → spec 002 already covers this via `VersionUnsupportedBeaconError` for the version mismatch case, or the legacy single-network flow.
 - The wallet rejected the request with a wire-level `AbortedBeaconError` (user denied) → existing wire-error path applies; `NetworksUnsupportedBeaconError` is not raised.
 - A `requestOperation` on a single-network session without a `network` argument → uses the session's only network (FR-011). Not an error.
 - The user manually called `setActiveAccount` to switch among the N records in the session → `getActiveAccount().network.chainId` becomes the implicit target; if the caller still wants to override per call, they pass `network` explicitly.
 
-## Re-raise / catch idioms (dApp consumer pattern)
+## Consumer pattern (dApp-side decision)
+
+Under FR-005 partial fulfillment, `requestPermissions` **resolves** even when the wallet can't serve every network — it throws only when the served subset is empty (F1) or there is no fanout at all (F4). The dApp inspects what it got and decides:
 
 ```ts
 try {
   await client.requestPermissions({ networks: [L1, L2] })
+
+  // Resolved — but the wallet may have served only a subset. Inspect it.
+  const served = (await client.getAccounts()).map(a => a.network.chainId)
+  const haveL1 = served.includes(L1.chainId)
+  const haveL2 = served.includes(L2.chainId)
+
+  if (haveL1 && haveL2) {
+    enableFullBridge()
+  } else if (haveL1) {
+    // Graceful degradation: offer the L1→L2 deposit flow only.
+    enableDepositOnly()
+  } else {
+    showError('This wallet can\'t serve the networks this dApp needs.')
+  }
 } catch (e) {
   if (e instanceof NetworksUnsupportedBeaconError) {
-    // Retry with only the networks the wallet can serve
-    const supported = L1AndL2.filter(n => !e.unsupportedNetworks.includes(n.chainId))
-    if (supported.length > 0) {
-      await client.requestPermissions({ networks: supported })
-    } else {
-      showError("This wallet doesn't support any of the networks this dApp needs.")
-    }
+    // Empty subset (F1) or wallet doesn't understand fanout (F4).
+    showError('This wallet doesn\'t support any of the networks this dApp needs.')
   } else {
     throw e
   }
 }
 ```
 
-This is the canonical "catch + retry with subset" pattern referenced in spec edge case 1.
+This is the canonical "inspect served subset + decide" pattern referenced in spec edge case 1. The wallet's optional advisory `unsupportedNetworks` field (when present on the response) lets the dApp distinguish "wallet doesn't know this chain" from "user has no account here" for precise messaging — but the served `accounts` set is authoritative for what the session contains.
 
 ## Relationship to `VersionUnsupportedBeaconError` (spec 002)
 
 | | `VersionUnsupportedBeaconError` (spec 002) | `NetworksUnsupportedBeaconError` (spec 003) |
 |---|---|---|
-| Trigger | Wallet's `peer.version` < dApp's `requiredMinimumVersion` | Wallet cannot serve one or more requested networks |
+| Trigger | Wallet's `peer.version` < dApp's `requiredMinimumVersion` | Served subset empty (F1) / no fanout at all (F4) / operation mis-targeted (F2/F3). A non-empty partial subset does NOT trigger it. |
 | Layer | Client-side only | Client-side only |
 | Wire registration | NOT in `BeaconErrorType` | NOT in `BeaconErrorType` |
 | Discrimination | `instanceof` + `errorCode === 'VERSION_UNSUPPORTED'` | `instanceof` + `errorCode === 'NETWORKS_UNSUPPORTED'` |

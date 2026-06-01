@@ -107,9 +107,9 @@ Spec 002 already shipped the `RequestPermissionNetwork` input type and the `netw
     readonly message: string
   }
   ```
-- **When raised** (one of two paths):
-  1. **FR-005**: Wallet returned a permission response that names networks it cannot serve. `unsupportedNetworks` carries those names; `requestedNetworks` is the dApp's original request.
-  2. **FR-019**: Wallet returned a v4 response missing the `accounts[]` fanout for a multi-network request (see [research.md](./research.md) R6). `unsupportedNetworks` is computed as the set difference `request.networks − response.accounts.keys()`.
+- **When raised** (one of two permission-path conditions; rev 2026-06-01):
+  1. **FR-005 (empty served subset)**: Wallet returned a permission response whose served `accounts` subset is empty — it could serve *none* of the requested networks. `unsupportedNetworks` carries the full requested set; `requestedNetworks` is the dApp's original request. A *non-empty* partial subset is graceful degradation (FR-005 partial fulfillment) and does NOT raise — the SDK persists the served accounts and the dApp decides.
+  2. **FR-019 (no fanout at all)**: Wallet returned a v4 response with no `accounts[]` map at all for a multi-network request — a v4 wallet that does not understand spec-003 fanout (see [research.md](./research.md) R6). `unsupportedNetworks` is the full requested set. (Narrowed from the earlier "fewer entries than requested" trigger — a partial-but-non-empty subset is now valid fulfillment, not a capability gap.)
 - **NOT registered in** `BeaconErrorType`. Never crosses the wire; discrimination is via `instanceof` and the `errorCode` literal.
 - See [contracts/networks-unsupported-error.md](./contracts/networks-unsupported-error.md) for the normative contract.
 
@@ -149,11 +149,28 @@ const handlers: Record<string /* CAIP-2 chain id */, BlockchainHandlerBundle> = 
   'tezos:NetXY2oPPzkxUW1': tezosXL2Handler,
 }
 
-function dispatch(message: BeaconMessage): Promise<unknown> {
-  const chainId = extractChainId(message) // CAIP-2 string from the request
-  const handler = handlers[chainId] ?? fallbackHandler
-  if (!handler) throw new NetworksUnsupportedBeaconError(...)
-  return invokeFor(message.type, handler, message)
+// permission_request: fan out over the requested networks, serving the
+// subset present in `handlers` and omitting the rest (FR-005 partial
+// fulfillment, rev 2026-06-01). The wallet does NOT reject the whole request.
+function onPermission(message: PermissionRequest): Promise<PermissionResponse> {
+  const requested = extractChainIds(message)
+  const served = requested.filter((c) => handlers[c])
+  const unsupportedNetworks = requested.filter((c) => !handlers[c])
+  const accounts = await buildAccounts(served, handlers, message)
+  return respondWith({
+    accounts,
+    // OPTIONAL advisory metadata — present only when some chain was omitted.
+    ...(unsupportedNetworks.length ? { unsupportedNetworks } : {}),
+  })
+}
+
+// operation_request: a single op targets exactly one chain. If the wallet
+// can't serve it there's nothing to partially fulfill — reject that op.
+function onOperation(message: OperationRequest): Promise<OperationResponse> {
+  const chainId = extractChainId(message)
+  const handler = handlers[chainId]
+  if (!handler) return respondError('NETWORK_NOT_SUPPORTED', [chainId])
+  return invokeOperation(handler, message)
 }
 ```
 
@@ -191,8 +208,8 @@ A single dApp-wallet pair (one `Peer` record, one `peer.version` value, one tran
 
 1. **dApp side**: Build `RequestPermissionInput` with `networks: [L1, L2]` (spec 002 T028). Send.
 2. **Wire**: `permission_request` carries `networks: [{ chainId: 'tezos:NetXsqzbfFenSTS' }, { chainId: 'tezos:NetXY2oPPzkxUW1' }]` (spec 002).
-3. **Wallet side**: Invokes integrator's per-network handlers (R5 pattern). Builds `accounts: Record<chainId, { publicKey }>` (existing reference code).
-4. **Wire**: `permission_response` carries `blockchainData.accounts = { 'tezos:NetXsqzbfFenSTS': {...}, 'tezos:NetXY2oPPzkxUW1': {...} }`.
+3. **Wallet side**: Invokes integrator's per-network handlers (R5 pattern) for the subset of requested chains it can serve. Builds `accounts: Record<chainId, { publicKey }>` for that served subset (FR-005 partial fulfillment — unknown chains are omitted, not rejected).
+4. **Wire**: `permission_response` carries `blockchainData.accounts = { 'tezos:NetXsqzbfFenSTS': {...}, 'tezos:NetXY2oPPzkxUW1': {...} }`, plus an OPTIONAL advisory `unsupportedNetworks: string[]` when any requested chain was omitted.
 5. **dApp SDK ingress** (`DAppClient.permissionRequest()`):
    - `blockchain.getAccountInfosFromPermissionResponse(response.message)` → `[{ accountId, address, publicKey, network, scopes }, { ... }]` (N=2 after R2 Path A fix).
    - **Spec 003 change**: loop over the array, create one `AccountInfo` per entry, call `accountManager.addAccount(...)` for each.

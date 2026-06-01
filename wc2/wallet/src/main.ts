@@ -15,10 +15,13 @@ const L1_RPC     = 'https://rpc.shadownet.teztnets.com'
 const L2_RPC     = 'https://michelson.previewnet.tezosx.nomadic-labs.com'
 
 // Spec 003 multi-network protocol — recommended integrator dispatch pattern.
-// Set of CAIP-2 chain ids this wallet supports. permission_request and
-// operation_request both check membership; unknown chain ids are rejected
-// with NETWORK_NOT_SUPPORTED. See specs/003-multi-network-protocol/data-model.md
-// "Integrator Dispatch Pattern".
+// Set of CAIP-2 chain ids this wallet supports. Both permission_request and
+// operation_request check membership, but react differently:
+//   - permission_request: serves the supported subset and omits unknown chains
+//     (partial fulfillment); the dApp decides if the subset is enough.
+//   - operation_request: a single targeted op on an unknown chain is rejected
+//     with NETWORK_NOT_SUPPORTED (there's nothing to partially fulfill).
+// See specs/003-multi-network-protocol/data-model.md "Integrator Dispatch Pattern".
 const SUPPORTED_CHAIN_IDS = new Set<string>([L1_CHAIN, L2_CHAIN])
 
 // ── DOM refs ──────────────────────────────────────────────────────────────────
@@ -376,38 +379,38 @@ async function main() {
           rpcUrl: n.rpcUrl,
         }))
 
-        // Spec 003 FR-005: reject the whole request if any chain id is not in
-        // the wallet's supported set — no partial accounts[] is built.
+        // Spec 003 FR-005 (revised 2026-06-01 per review): partial fulfillment.
+        // The wallet serves the subset of requested chains it knows and simply
+        // omits the rest from `accounts[]` — it does NOT reject the whole
+        // request. The unsupported chain ids are echoed back as OPTIONAL
+        // advisory `unsupportedNetworks` metadata so the dApp can show precise
+        // messaging; the decision to accept the partial session is the dApp's.
+        const supportedNets = nets.filter((n) => SUPPORTED_CHAIN_IDS.has(n.chainId))
         const unsupportedNetworks = nets
           .map((n) => n.chainId)
           .filter((c) => !SUPPORTED_CHAIN_IDS.has(c))
-        if (unsupportedNetworks.length > 0) {
-          addLog(`Rejecting permission_request: unsupported networks ${unsupportedNetworks.join(', ')}`, 'err')
-          await client.respond({
-            type: BeaconMessageType.Error,
-            id: message.id,
-            errorType: 'NETWORK_NOT_SUPPORTED',
-            unsupportedNetworks,
-          } as any)
-          return
-        }
 
         showPermissionRequest(
           message.appMetadata?.name ?? 'Unknown dApp',
-          nets,
+          supportedNets,
           async () => {
-            // Approve — build accounts map
+            // Approve — build the served-subset accounts map.
             networkRegistry = {}
             const accounts: Record<string, { publicKey: string }> = {}
-            for (const n of nets) {
+            for (const n of supportedNets) {
               accounts[n.chainId] = { publicKey }
               if (n.rpcUrl) networkRegistry[n.chainId] = n.rpcUrl
+            }
+            if (unsupportedNetworks.length > 0) {
+              addLog(`Partial session: serving ${Object.keys(accounts).join(', ') || '(none)'}; unsupported (advisory) ${unsupportedNetworks.join(', ')}`, 'ok')
             }
             await client.respond({
               type: BeaconMessageType.PermissionResponse,
               id: message.id,
               publicKey,
               accounts,
+              // OPTIONAL advisory metadata — no decision, just the information.
+              ...(unsupportedNetworks.length > 0 ? { unsupportedNetworks } : {}),
               network: message.network,
               scopes: message.scopes ?? [PermissionScope.OPERATION_REQUEST],
             } as any)

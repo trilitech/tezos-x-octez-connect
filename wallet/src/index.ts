@@ -344,10 +344,15 @@ async function main(): Promise<void> {
       if (isMultiNetwork) {
         // Spec 003 multi-network handler — dispatch through the per-blockchain
         // handlers table. Build the rpc registry from `networks[]` first, then
-        // invoke each chain's `onPermission` to assemble the response. The
-        // default branch (chain id not in `handlers`) emits a wire-level
-        // FR-005 rejection naming the unsupported networks — no partial
-        // `accounts[]` is constructed.
+        // invoke `onPermission` for every chain the wallet can serve. Chains the
+        // wallet does not know are simply omitted from `accounts[]` (partial
+        // fulfillment): the wallet returns the served subset and lets the dApp
+        // decide whether that subset is enough for its flow (spec 003 FR-005,
+        // revised 2026-06-01 per review — the wallet no longer arbitrates which
+        // networks are mandatory; that's dApp policy). The unsupported chain ids
+        // are echoed back as OPTIONAL advisory `unsupportedNetworks` metadata —
+        // the information, without the decision — so the dApp can show precise
+        // user-facing messaging.
         const incomingNetworks: any[] = (message as any).networks ?? []
         networkRegistry = {}
         const seenChainIds = new Set<string>()
@@ -358,30 +363,28 @@ async function main(): Promise<void> {
           if (net.rpcUrl) networkRegistry[chainId] = net.rpcUrl
         }
         const requestedChainIds = [...seenChainIds]
+        const supportedChainIds = requestedChainIds.filter((c) => handlers[c])
         const unsupportedNetworks = requestedChainIds.filter((c) => !handlers[c])
-        if (unsupportedNetworks.length > 0) {
-          console.log(`[wallet] rejecting permission_request: unsupported networks ${unsupportedNetworks.join(', ')}`)
-          await client.respond({
-            type: BeaconMessageType.Error,
-            id: message.id,
-            errorType: 'NETWORK_NOT_SUPPORTED',
-            unsupportedNetworks,
-          } as any)
-        } else {
-          const accounts: Record<string, { publicKey: string }> = {}
-          for (const chainId of requestedChainIds) {
-            const handler = handlers[chainId]
-            accounts[chainId] = await handler.onPermission(chainId, publicKey)
-          }
-          await client.respond({
-            type: BeaconMessageType.PermissionResponse,
-            id: message.id,
-            publicKey,          // keep for SDK session establishment
-            accounts,           // multi-network account map, keyed by CAIP-2 chainId
-            network: message.network,
-            scopes: message.scopes ?? [PermissionScope.OPERATION_REQUEST],
-          } as any)
+        const accounts: Record<string, { publicKey: string }> = {}
+        for (const chainId of supportedChainIds) {
+          const handler = handlers[chainId]
+          accounts[chainId] = await handler.onPermission(chainId, publicKey)
         }
+        if (unsupportedNetworks.length > 0) {
+          console.log(`[wallet] partial permission_response: serving ${supportedChainIds.join(', ') || '(none)'}; unsupported (advisory) ${unsupportedNetworks.join(', ')}`)
+        }
+        await client.respond({
+          type: BeaconMessageType.PermissionResponse,
+          id: message.id,
+          publicKey,            // keep for SDK session establishment
+          accounts,             // served subset, keyed by CAIP-2 chainId
+          // OPTIONAL advisory metadata — present only when some requested
+          // network could not be served. Carries no decision; the dApp chooses
+          // how to react (graceful degradation vs. surface an error).
+          ...(unsupportedNetworks.length > 0 ? { unsupportedNetworks } : {}),
+          network: message.network,
+          scopes: message.scopes ?? [PermissionScope.OPERATION_REQUEST],
+        } as any)
       } else {
         // Legacy single-network handler. No networks[] inspection.
         await client.respond({

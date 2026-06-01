@@ -48,19 +48,23 @@ client.requestPermissions({
   blockchainData: {
     appMetadata: { ... },
     scopes: [...],
-    accounts: {                         // CAIP-2-keyed map. REQUIRED for multi-network responses.
+    accounts: {                         // CAIP-2-keyed map of the SERVED subset. REQUIRED for multi-network responses.
       'tezos:NetXsqzbfFenSTS': { publicKey: '...', address: 'tz1...' },
       'tezos:NetXY2oPPzkxUW1': { publicKey: '...', address: 'tz1...' }
-    }
+    },
+    unsupportedNetworks: [              // OPTIONAL advisory metadata (spec 003 FR-005, rev 2026-06-01).
+      // 'tezos:NetXSomeChain'          // Present only when the wallet omitted one or more requested
+    ]                                   // chains from `accounts`. Informational — carries no decision.
   }
 }
 ```
 
 **Rules**:
 
-- **C1 (REQUIRED for multi-network)**: When the request carried `networks.length >= 2`, the response MUST carry `accounts` as a CAIP-2-keyed map with one entry per requested network the wallet serves.
+- **C1 (REQUIRED for multi-network)**: When the request carried `networks.length >= 2`, the response MUST carry `accounts` as a CAIP-2-keyed map with one entry per requested network the wallet serves. Per FR-005 (partial fulfillment) the wallet serves the subset it can and omits the rest — `accounts` need not cover every requested network.
 - **C2 (OPTIONAL for single-network)**: When the request carried `networks.length <= 1` (including omitted), the response MAY include `accounts` or MAY use the legacy single-network shape. dApp SDK ingress (below) handles either.
-- **C3 (subset rule)**: The set of keys in `accounts` MUST be a subset of the requested `chainId` set. The wallet MUST NOT add networks the dApp did not ask for. (See FR-005 / `contracts/networks-unsupported-error.md` for the rejection path when the wallet can't serve all requested networks.)
+- **C3 (subset rule)**: The set of keys in `accounts` MUST be a subset of the requested `chainId` set. The wallet MUST NOT add networks the dApp did not ask for. When the wallet cannot serve every requested network it returns the served subset (FR-005 partial fulfillment) — it does NOT reject the whole request. See `contracts/networks-unsupported-error.md` for the dApp-side `NetworksUnsupportedBeaconError` paths (empty subset / no fanout at all).
+- **C3a (advisory unsupported field)**: The response MAY carry an OPTIONAL `unsupportedNetworks: string[]` field naming the requested chain ids the wallet omitted from `accounts`. It is purely informational — it lets the dApp distinguish "wallet doesn't know this chain" from "user has no account here" for messaging. The dApp SDK MUST NOT treat its presence as an error signal on its own; the served `accounts` map is authoritative for what the session contains.
 - **C4 (per-account fields)**: Each value in `accounts` MUST carry `publicKey` and `address`. It MAY carry additional metadata (scopes per chain, etc.) — the dApp SDK ingress is liberal in what it accepts.
 - **C5 (legacy v3 response unchanged)**: A `peer.version = '3'` wallet does NOT populate `accounts` and continues to use the legacy single-network response fields exclusively. The wallet-side `peer.version`-routing from spec 002 already enforces this.
 
@@ -94,7 +98,7 @@ await this.setActiveAccount(partialAccountInfos[0] ? toAccountInfo(partialAccoun
 
 - **C6**: The SDK MUST call `addAccount(...)` once per entry in `partialAccountInfos`. The `[0]` slice (current behavior at `DAppClient.ts:1523,1529,1530,1551`) MUST be removed.
 - **C7**: The first record becomes the active account by default. (Future enhancement: a `defaultNetwork` option in `RequestPermissionInput` could let the dApp pick — out of scope for v1.)
-- **C8 (FR-019 defensive)**: If `request.networks.length >= 2` and the wallet's response carries `accounts` with fewer entries than requested (or no `accounts` map at all), the SDK MUST raise `NetworksUnsupportedBeaconError` (see [networks-unsupported-error.md](./networks-unsupported-error.md)) with `unsupportedNetworks` populated from the set difference. No partial session is created.
+- **C8 (FR-019 defensive — narrowed 2026-06-01)**: If `request.networks.length >= 2` and the wallet's response carries **no `accounts` map at all** (an absent or empty fanout — a v4 wallet that does not understand spec-003 multi-network), the SDK MUST raise `NetworksUnsupportedBeaconError` (see [networks-unsupported-error.md](./networks-unsupported-error.md)) with `unsupportedNetworks` populated from the full requested set. A response carrying `accounts` with **fewer entries than requested but at least one entry** is valid partial fulfillment (FR-005): the SDK persists the served subset, surfaces any advisory `unsupportedNetworks`, and does NOT raise — the dApp decides whether the subset suffices.
 - **C9 (single-network passthrough)**: If `request.networks.length <= 1` and the response uses the legacy single-network shape, the SDK MUST emit exactly one `AccountInfo` — identical to today's behavior. Zero regression for v3 dApps and single-network v4 dApps.
 - **C10 (identifier uniqueness)**: The blockchain implementation's `getAccountInfosFromPermissionResponse` MUST derive distinct `accountId` values for each entry. The reference implementation derives from `(publicKey, chainId)` — the wallet's distinct per-chain public keys naturally produce distinct identifiers.
 
@@ -107,5 +111,6 @@ await this.setActiveAccount(partialAccountInfos[0] ? toAccountInfo(partialAccoun
 | v4 single-network | v4 multi-network | `networks.length === 1` | `accounts` with one entry, or legacy single | One `AccountInfo`. C9 applies. |
 | v4 single-network | v4 single-network | `networks.length === 1` | `accounts` with one entry, or legacy single | One `AccountInfo`. C9 applies. |
 | v4 multi-network | v4 multi-network | `networks.length >= 2` | `accounts` with all entries | N `AccountInfo`s. C6. **The headline path.** |
-| v4 multi-network | v4 single-network | `networks.length >= 2` | `accounts` with fewer entries (or none) | `NetworksUnsupportedBeaconError` raised. C8. |
+| v4 multi-network | v4 multi-network (partial) | `networks.length >= 2` | `accounts` with a non-empty subset (+ optional advisory `unsupportedNetworks`) | M `AccountInfo`s (M < N). Partial fulfillment, FR-005. dApp decides if M is enough. No error raised. |
+| v4 multi-network | v4 single-network (no fanout) | `networks.length >= 2` | no `accounts` map at all | `NetworksUnsupportedBeaconError` raised. C8 / FR-019. |
 | v4 multi-network | v3 (legacy) | `networks.length >= 2` | wire-level `version_unsupported` from dApp SDK | Caught by spec 002 `VersionUnsupportedBeaconError` — request never sent. |

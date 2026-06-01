@@ -248,7 +248,7 @@ function defaultMessage(input: { requestedNetworks: string[]; unsupportedNetwork
   if (input.unsupportedNetworks.length === 0 && input.requestedNetworks.length === 0) {
     return 'Multiple networks available in this session; specify a network argument on requestOperation.'
   }
-  return `The wallet cannot serve all requested networks. Unsupported: ${input.unsupportedNetworks.join(', ')}.`
+  return `The wallet cannot serve any of the requested networks: ${input.unsupportedNetworks.join(', ')}.`
 }
 ```
 
